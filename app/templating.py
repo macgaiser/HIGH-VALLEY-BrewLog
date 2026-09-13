@@ -62,5 +62,12 @@ def _de_date(value) -> str:
     return value.strftime("%d.%m.%Y")
 
 
+def _de_date_short(value) -> str:
+    if value is None:
+        return "–"
+    return value.strftime("%d.%m.%y")
+
+
 templates.env.filters["fmt"] = _fmt
 templates.env.filters["de_date"] = _de_date
+templates.env.filters["de_date_short"] = _de_date_short

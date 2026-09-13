@@ -344,7 +344,7 @@ h1, h2, h3 {
 }
 .table thead th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
 .clickable-row { cursor: pointer; }
-.col-name, .col-style { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-name, .col-style { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .col-actions { text-align: center; }
 .btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.1rem; height: 2.1rem; padding: 0; }
 .btn-icon svg { width: 1.1rem; height: 1.1rem; }
@@ -490,6 +490,15 @@ tr.row-selected:hover { background: rgba(240, 190, 51, 0.3); }
   --icon-2: var(--border);
 }
 .table .beer-color-icon { width: 1.5rem; height: 1.5rem; margin-left: 0; }
+
+.ferm-icon {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  vertical-align: middle;
+  --icon-1: var(--brown);
+  --icon-2: var(--green);
+}
 /* 50% groesser als die Basisgroesse UND per translateY nach oben gerueckt -
    "vertical-align:middle" zentriert an der Schriftmitte, aber durch den
    leeren/nur umrissenen Schaum oben wirkt das Icon-eigene Gewicht tiefer
