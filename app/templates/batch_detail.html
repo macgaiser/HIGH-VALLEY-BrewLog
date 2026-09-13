@@ -153,6 +153,7 @@
       <h2><span>Hefegabe</span><img class="step-icon" src="/static/img/step-kuehlen.png" alt=""></h2>
       <div class="table-scroll">
       <table class="mini-table">
+        <thead><tr><th>Hefe</th><th>Führung</th><th>Menge</th><th>Temp.</th><th>Kommentar</th></tr></thead>
         {% for y in batch.yeast_additions %}
         <tr><td>{{ y.yeast_name }}</td><td>{{ y.generation_label }}</td><td>{{ y.amount|fmt(0) }} {{ y.unit }}</td><td>{{ y.pitch_temperature_c|fmt(0) }} °C</td><td>{{ y.comment }}</td></tr>
         {% else %}
