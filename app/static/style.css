@@ -480,6 +480,24 @@ tr.row-selected:hover { background: rgba(240, 190, 51, 0.3); }
 .stat-label { font-size: 0.76rem; color: var(--muted); }
 .stat-value { font-family: var(--font-display); font-size: 1.55rem; color: var(--brown); }
 
+/* Statistik-Seite */
+.stat-period-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; margin: 1rem 0; }
+.stat-period-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.stat-period-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.stat-period-custom label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; color: var(--muted); }
+.stat-period-custom input[type="date"] { width: auto; }
+.stat-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.stat-charts-grid > .card { margin: 0; min-width: 0; }
+.chart-box { position: relative; height: 260px; margin-top: 0.5rem; }
+tr.row-low-stock { background: rgba(179, 57, 44, 0.08); }
+tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
+.stock-remaining-warn { color: var(--danger); font-weight: 600; }
+
 .beer-color-icon {
   display: inline-block;
   width: 1.3rem;

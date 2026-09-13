@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.auth import get_current_user
 from app.database import BACKGROUND_IMAGE_DIR, BORDER_GRAPHIC_DIR, LOGO_DIR, init_db
-from app.routers import batches, inventory, settings
+from app.routers import batches, inventory, settings, statistics
 
 app = FastAPI(title="HighValley BrewLog")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -40,4 +40,5 @@ def service_worker() -> FileResponse:
 
 app.include_router(batches.router, dependencies=[Depends(get_current_user)])
 app.include_router(inventory.router, dependencies=[Depends(get_current_user)])
+app.include_router(statistics.router, dependencies=[Depends(get_current_user)])
 app.include_router(settings.router, dependencies=[Depends(get_current_user)])

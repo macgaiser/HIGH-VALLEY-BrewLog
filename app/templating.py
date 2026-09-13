@@ -1,6 +1,8 @@
+import json
 import os
 
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 from sqlmodel import Session
 
 from app.database import engine
@@ -68,6 +70,18 @@ def _de_date_short(value) -> str:
     return value.strftime("%d.%m.%y")
 
 
+def _tojson(value) -> Markup:
+    """Fuer Chart.js-Daten im <script>-Block der Statistik-Seite: reines
+    Jinja2 (anders als Flask) bringt keinen tojson-Filter mit. Escaped die
+    fuer JSON-in-HTML kritischen Zeichen (Flask-kompatibel) und markiert das
+    Ergebnis als bereits sicher, damit Jinjas Auto-Escaping die JSON-
+    Anfuehrungszeichen nicht zusaetzlich in HTML-Entities verwandelt."""
+    raw = json.dumps(value)
+    raw = raw.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026").replace("'", "\\u0027")
+    return Markup(raw)
+
+
 templates.env.filters["fmt"] = _fmt
 templates.env.filters["de_date"] = _de_date
 templates.env.filters["de_date_short"] = _de_date_short
+templates.env.filters["tojson"] = _tojson

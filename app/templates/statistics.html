@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Statistik – HighValley BrewLog{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Statistik</h1>
+</div>
+
+<div class="stat-period-form">
+  <form class="stat-period-presets" method="get" action="/statistics">
+    {% for key, label in presets.items() %}
+    <button type="submit" name="preset" value="{{ key }}" class="btn {{ 'btn-primary' if active_preset == key else '' }}">{{ label }}</button>
+    {% endfor %}
+  </form>
+  <form class="stat-period-custom" method="get" action="/statistics">
+    <label>von <input type="date" name="date_from" value="{{ date_from }}"></label>
+    <label>bis <input type="date" name="date_to" value="{{ date_to }}"></label>
+    <button class="btn" type="submit">Anwenden</button>
+  </form>
+</div>
+
+<div class="stat-grid">
+  <div class="stat"><span class="stat-label">Gebraute Menge</span><span class="stat-value">{{ result.total_liters|fmt(1) }} l</span></div>
+  <div class="stat"><span class="stat-label">Sude</span><span class="stat-value">{{ result.batch_count }}</span></div>
+  <div class="stat"><span class="stat-label">Brautage</span><span class="stat-value">{{ result.brew_day_count }}</span></div>
+  <div class="stat"><span class="stat-label">Ø Menge / Sud</span><span class="stat-value">{{ (result.total_liters / result.batch_count)|fmt(1) if result.batch_count else "–" }} l</span></div>
+  <div class="stat"><span class="stat-label">Ø Abstand zwischen Brautagen</span><span class="stat-value">{{ result.avg_days_between_brew_days|fmt(0) ~ " Tage" if result.avg_days_between_brew_days is not none else "–" }}</span></div>
+</div>
+
+{% if result.batch_count == 0 %}
+<p class="hint">Keine Sude mit Brautag-Datum in diesem Zeitraum.</p>
+{% else %}
+<div class="stat-charts-grid">
+  <section class="card">
+    <h2>Gebraute Menge</h2>
+    <div class="chart-box"><canvas id="chart-volume"></canvas></div>
+  </section>
+  {% if result.fermentation_usage %}
+  <section class="card">
+    <h2>Menge nach Gärart</h2>
+    <div class="chart-box"><canvas id="chart-fermentation"></canvas></div>
+  </section>
+  {% endif %}
+</div>
+
+{% if result.style_usage or result.color_share %}
+<div class="stat-charts-grid">
+  {% if result.style_usage %}
+  <section class="card">
+    <h2>Menge nach Bierstil</h2>
+    <div class="chart-box"><canvas id="chart-style"></canvas></div>
+  </section>
+  {% endif %}
+  {% if result.color_share %}
+  <section class="card">
+    <h2>Menge nach Bierfarbe</h2>
+    <div class="chart-box"><canvas id="chart-color"></canvas></div>
+  </section>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if result.item_usage %}
+<div class="stat-charts-grid">
+  {% for key, cat_label in [("malz", "Top Malze"), ("hopfen", "Top Hopfen"), ("hefe", "Top Hefen")] %}
+  {% if key in result.item_usage %}
+  <section class="card">
+    <h2>{{ cat_label }}</h2>
+    <div class="chart-box"><canvas id="chart-item-{{ key }}"></canvas></div>
+  </section>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+
+<section class="card">
+  <h2>Lagerbestand-Reichweite <button type="button" class="info-btn" data-info-toggle="stock-forecast-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
+  <p class="hint info-popover" id="stock-forecast-hint" hidden>Reichweite = aktueller Bestand geteilt durch den durchschnittlichen Monatsverbrauch der letzten 12 Monate - eine grobe Schätzung, kein exakter Wert. Zutaten ohne Verbrauch in den letzten 12 Monaten haben keine Schätzung. Die Bestellempfehlung füllt auf eine Ziel-Reichweite von {{ target_coverage_months|fmt(0) }} Monaten auf, Zutaten mit weniger als {{ low_stock_threshold_months|fmt(0) }} Monaten Reichweite sind hervorgehoben.</p>
+  {% if result.stock_forecast %}
+  <div class="table-scroll">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Zutat</th>
+        <th>Kategorie</th>
+        <th>Bestand</th>
+        <th>Ø Verbrauch/Monat</th>
+        <th>Reichweite</th>
+        <th>Bestellempfehlung</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in result.stock_forecast %}
+      <tr class="{{ 'row-low-stock' if f.low_stock else '' }}">
+        <td>{{ f.name }}</td>
+        <td>{{ f.category }}</td>
+        <td{% if f.depleted %} class="stock-remaining-warn"{% endif %}>{{ f.current_amount|fmt(2) }} {{ f.unit }}</td>
+        <td>{% if f.avg_monthly_usage %}{{ f.avg_monthly_usage|fmt(2) }} {{ f.unit }}{% else %}–{% endif %}</td>
+        <td{% if f.low_stock %} class="stock-remaining-warn"{% endif %}>{% if f.depleted and f.avg_monthly_usage %}aufgebraucht{% elif f.months_remaining is not none %}{{ f.months_remaining|fmt(1) }} Monate{% else %}kein Verbrauch (12 Mon.){% endif %}</td>
+        <td>{% if f.recommended_order %}{{ f.recommended_order|fmt(2) }} {{ f.unit }}{% else %}–{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="hint">Noch keine Lagerartikel angelegt.</p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if result.batch_count > 0 %}
+<script src="/static/vendor/chartjs/chart.umd.min.js"></script>
+<script>
+  Chart.defaults.font.family = "Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  Chart.defaults.color = "#2b2015";
+
+  new Chart(document.getElementById("chart-volume"), {
+    type: "bar",
+    data: {
+      labels: {{ result.monthly_volume|map(attribute='label')|list|tojson }},
+      datasets: [{
+        label: "Liter",
+        data: {{ result.monthly_volume|map(attribute='liters')|list|tojson }},
+        backgroundColor: "#6b3417",
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, title: { display: true, text: "Liter" } } },
+    },
+  });
+
+  {% if result.fermentation_usage %}
+  new Chart(document.getElementById("chart-fermentation"), {
+    type: "pie",
+    data: {
+      labels: {{ result.fermentation_usage|map(attribute='label')|list|tojson }},
+      datasets: [{
+        data: {{ result.fermentation_usage|map(attribute='liters')|list|tojson }},
+        backgroundColor: ["#6b3417", "#6a9e34", "#f0be33", "#35a4c2"],
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var counts = {{ result.fermentation_usage|map(attribute='batch_count')|list|tojson }};
+              return ctx.label + ": " + ctx.parsed + " l (" + counts[ctx.dataIndex] + " Sude)";
+            },
+          },
+        },
+      },
+    },
+  });
+  {% endif %}
+
+  {% if result.style_usage %}
+  new Chart(document.getElementById("chart-style"), {
+    type: "bar",
+    data: {
+      labels: {{ result.style_usage|map(attribute='label')|list|tojson }},
+      datasets: [{
+        label: "Liter",
+        data: {{ result.style_usage|map(attribute='liters')|list|tojson }},
+        backgroundColor: "#6a9e34",
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var counts = {{ result.style_usage|map(attribute='batch_count')|list|tojson }};
+              return ctx.parsed.x + " l (" + counts[ctx.dataIndex] + " Sude)";
+            },
+          },
+        },
+      },
+      scales: { x: { beginAtZero: true, title: { display: true, text: "Liter" } } },
+    },
+  });
+  {% endif %}
+
+  {% if result.color_share %}
+  new Chart(document.getElementById("chart-color"), {
+    type: "pie",
+    data: {
+      labels: {{ result.color_share|map(attribute='ebc')|list|map('string')|list|tojson }},
+      datasets: [{
+        data: {{ result.color_share|map(attribute='liters')|list|tojson }},
+        backgroundColor: {{ result.color_share|map(attribute='hex')|list|tojson }},
+        borderColor: "#8a7a63",
+        borderWidth: 1,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            generateLabels: function (chart) {
+              return chart.data.labels.map(function (label, i) {
+                return { text: label + " EBC", fillStyle: chart.data.datasets[0].backgroundColor[i], strokeStyle: "#8a7a63", lineWidth: 1 };
+              });
+            },
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var counts = {{ result.color_share|map(attribute='batch_count')|list|tojson }};
+              return ctx.label + " EBC: " + ctx.parsed + " l (" + counts[ctx.dataIndex] + " Sude)";
+            },
+          },
+        },
+      },
+    },
+  });
+  {% endif %}
+
+  {% for key, unit in [("malz", "kg"), ("hopfen", "g"), ("hefe", "g")] %}
+  {% if key in result.item_usage %}
+  new Chart(document.getElementById("chart-item-{{ key }}"), {
+    type: "bar",
+    data: {
+      labels: {{ result.item_usage[key]|map(attribute='name')|list|tojson }},
+      datasets: [{
+        label: "{{ unit }}",
+        data: {{ result.item_usage[key]|map(attribute='amount')|list|tojson }},
+        backgroundColor: "#6a9e34",
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, title: { display: true, text: "{{ unit }}" } } },
+    },
+  });
+  {% endif %}
+  {% endfor %}
+</script>
+{% endif %}
+{% endblock %}
