@@ -74,10 +74,18 @@
     {% for b in batches %}
     <tr onclick="window.location='/batches/{{ b.id }}'" class="clickable-row">
       <td>#{{ b.batch_number }}</td>
-      <td>{{ b.brew_date|de_date }}</td>
+      <td>{{ b.brew_date|de_date_short }}</td>
       <td class="col-name" title="{{ b.name }}">{{ b.name }}</td>
       <td class="col-style" title="{{ b.style }}">{{ b.style or "–" }}</td>
-      <td>{{ b.fermentation_type or "–" }}</td>
+      <td>
+        {% if b.fermentation_type == "Obergärig" %}
+        <svg class="ferm-icon" viewBox="0 0 28 28" title="Obergärig"><use href="#icon-ferm-top"/></svg>
+        {% elif b.fermentation_type == "Untergärig" %}
+        <svg class="ferm-icon" viewBox="0 0 28 28" title="Untergärig"><use href="#icon-ferm-bottom"/></svg>
+        {% else %}
+        –
+        {% endif %}
+      </td>
       <td>{{ og_display.get(b.id, "–") }} °P</td>
       <td>{{ ibu_display.get(b.id)|fmt(0) if ibu_display.get(b.id) is not none else "–" }}</td>
       <td>{% if color_hex.get(b.id) %}<svg class="beer-color-icon" viewBox="0 0 28 28" style="--icon-2: {{ color_hex.get(b.id) }}"><use href="#icon-stein"/></svg>{% endif %}</td>
