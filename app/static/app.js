@@ -225,3 +225,14 @@ if (window.flatpickr) {
     });
   });
 }
+
+// PWA: Service Worker registrieren (Voraussetzung fuer "Installieren"/"Zum
+// Startbildschirm hinzufuegen" auf iPhone, Android, Windows und Mac - siehe
+// manifest.json + sw.js). Schlaegt in Browsern ohne Unterstuetzung oder
+// ohne sicheren Kontext (kein HTTPS/localhost) einfach fehl, ohne die App
+// zu beeintraechtigen.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

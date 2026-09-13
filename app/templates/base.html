@@ -8,6 +8,17 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any">
   <link rel="stylesheet" href="/static/vendor/flatpickr/flatpickr.min.css">
   <link rel="stylesheet" href="/static/style.css{{ static_version('style.css') }}">
+  <!-- PWA: erlaubt "Installieren"/"Zum Startbildschirm hinzufuegen" auf
+       iPhone, Android, Windows und Mac (App-Icon, eigenes Fenster ohne
+       Adressleiste). Erfordert zusaetzlich den unter /sw.js registrierten
+       Service Worker (siehe scripts-Block unten). -->
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#6b3417">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BrewLog">
+  <meta name="mobile-web-app-capable" content="yes">
 </head>
 <body style="--bg-valley-url: url('{{ background_image_url() }}');">
   <svg width="0" height="0" style="position:absolute">

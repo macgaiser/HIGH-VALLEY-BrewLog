@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.auth import get_current_user
@@ -26,6 +26,16 @@ def healthz() -> str:
 @app.get("/")
 def root() -> RedirectResponse:
     return RedirectResponse("/batches")
+
+
+@app.get("/sw.js")
+def service_worker() -> FileResponse:
+    # Muss unter "/" statt "/static/sw.js" ausgeliefert werden, damit der
+    # Service Worker per Default-Scope die gesamte App steuern darf (der
+    # Scope eines Service Workers ist sonst auf sein eigenes Verzeichnis
+    # begrenzt) - fuer die PWA-Installierbarkeit auf iPhone/Android/
+    # Windows/Mac erforderlich.
+    return FileResponse("app/static/sw.js", media_type="application/javascript")
 
 
 app.include_router(batches.router, dependencies=[Depends(get_current_user)])

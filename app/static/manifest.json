@@ -1,0 +1,16 @@
+{
+  "name": "HighValley BrewLog",
+  "short_name": "BrewLog",
+  "description": "Braulog, Lagerbestand und Rezeptverwaltung für Hobbybrauer",
+  "lang": "de",
+  "start_url": "/batches",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f3e6",
+  "theme_color": "#6b3417",
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
