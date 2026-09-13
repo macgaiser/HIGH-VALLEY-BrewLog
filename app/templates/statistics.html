@@ -232,7 +232,7 @@
   });
   {% endif %}
 
-  {% for key, unit in [("malz", "kg"), ("hopfen", "g"), ("hefe", "g")] %}
+  {% for key, unit in [("malz", "kg"), ("hopfen", "g"), ("hefe", "Sude")] %}
   {% if key in result.item_usage %}
   new Chart(document.getElementById("chart-item-{{ key }}"), {
     type: "bar",

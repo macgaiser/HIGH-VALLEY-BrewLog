@@ -276,7 +276,7 @@ m-1870 -266 c9 -11 11 -37 7 -91 -3 -41 -12 -158 -21 -260 -38 -482 -39 -1448
       <a class="tab-nav {{ 'active' if request.url.path.startswith('/inventory') else '' }}" href="/inventory">
         <svg class="tab-nav-icon"><use href="#icon-grain"/></svg><span class="tab-nav-label">Lagerbestand</span>
       </a>
-      <a class="tab-nav {{ 'active' if request.url.path.startswith('/statistics') else '' }}" href="/statistics">
+      <a class="tab-nav tab-nav-stats {{ 'active' if request.url.path.startswith('/statistics') else '' }}" href="/statistics" aria-label="Statistik" title="Statistik">
         <svg class="tab-nav-icon"><use href="#icon-chart"/></svg><span class="tab-nav-label">Statistik</span>
       </a>
       <a class="tab-nav tab-nav-settings {{ 'active' if request.url.path.startswith('/settings') else '' }}" href="/settings" aria-label="Einstellungen" title="Einstellungen">

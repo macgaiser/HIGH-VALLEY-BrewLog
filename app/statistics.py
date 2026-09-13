@@ -120,16 +120,28 @@ def _brew_day_stats(batches: list[Batch]) -> tuple[int, float | None]:
     return len(unique_dates), round(sum(gaps) / len(gaps), 1)
 
 
+def _brewed_volume(batch: Batch) -> float | None:
+    """Tatsaechlich gebraute Menge fuer die Statistik: die in der
+    "Stammdaten Erfassung" (Sud-Ansicht) gemessene finale Menge nach dem
+    Kochen - nicht die im Bearbeiten-Formular nur geplante Ausschlagwuerze
+    (target_volume_l) und nicht der Hauptguss (nur die Anschuettwassermenge,
+    keine gebraute Menge). Ist die Messung noch nicht erfasst (z.B. Sud
+    frisch angelegt, noch nicht gebraut), faellt es auf die geplante Menge
+    zurueck, damit ein Sud nicht komplett aus der Statistik verschwindet."""
+    return batch.post_boil_volume_l or batch.target_volume_l
+
+
 def _monthly_volume(batches: list[Batch], start: date, end: date) -> list[MonthlyVolume]:
     span_months = (end.year - start.year) * 12 + (end.month - start.month) + 1
     yearly = span_months > 24
 
     totals: dict[tuple[int, int], float] = {}
     for b in batches:
-        if not b.target_volume_l:
+        volume = _brewed_volume(b)
+        if not volume:
             continue
         key = (b.brew_date.year, 1 if yearly else b.brew_date.month)
-        totals[key] = totals.get(key, 0.0) + b.target_volume_l
+        totals[key] = totals.get(key, 0.0) + volume
 
     result: list[MonthlyVolume] = []
     if yearly:
@@ -158,7 +170,7 @@ def _volume_share(batches: list[Batch], key_fn) -> list[VolumeShare]:
     counts: dict[str, int] = {}
     for b in batches:
         key = key_fn(b) or "Unbekannt"
-        totals[key] = totals.get(key, 0.0) + (b.target_volume_l or 0)
+        totals[key] = totals.get(key, 0.0) + (_brewed_volume(b) or 0)
         counts[key] = counts.get(key, 0) + 1
     return sorted(
         [VolumeShare(label=k, liters=round(totals[k], 1), batch_count=counts[k]) for k in totals],
@@ -199,7 +211,7 @@ def _color_share(batches: list[Batch]) -> list[ColorShare]:
             continue
         ebc, _ = resolved
         ebc_rounded = round(ebc)
-        totals[ebc_rounded] = totals.get(ebc_rounded, 0.0) + (b.target_volume_l or 0)
+        totals[ebc_rounded] = totals.get(ebc_rounded, 0.0) + (_brewed_volume(b) or 0)
         counts[ebc_rounded] = counts.get(ebc_rounded, 0) + 1
 
     result = [
@@ -230,10 +242,14 @@ def _item_usage(batches: list[Batch], top_n: int = 10) -> dict[str, list[ItemUsa
     hop_entries = [(h.hop_name, h.amount_g or 0) for b in batches for h in b.hop_additions] + [
         (d.hop_name, d.amount_g or 0) for b in batches for d in b.dry_hop_additions
     ]
-    yeast_entries = [(y.yeast_name, y.amount or 0) for b in batches for y in b.yeast_additions if y.unit == "g"]
+    # Bei Hefe interessiert nicht die Menge (oft nur ein Päckchen/eine feste
+    # Anstellmenge, teils in unterschiedlichen Einheiten wie g/ml erfasst),
+    # sondern in wie vielen Suden eine Hefe zum Einsatz kam - jeder Eintrag
+    # zaehlt daher pauschal 1, die Summe ergibt direkt die Sud-Anzahl.
+    yeast_entries = [(y.yeast_name, 1) for b in batches for y in b.yeast_additions]
 
     result: dict[str, list[ItemUsage]] = {}
-    for key, entries, unit in (("malz", malt_entries, "kg"), ("hopfen", hop_entries, "g"), ("hefe", yeast_entries, "g")):
+    for key, entries, unit in (("malz", malt_entries, "kg"), ("hopfen", hop_entries, "g"), ("hefe", yeast_entries, "Sude")):
         aggregated = aggregate(entries)[:top_n]
         if aggregated:
             result[key] = [ItemUsage(name=n, amount=round(a, 2), unit=unit, batch_count=c) for n, a, c in aggregated]
@@ -298,7 +314,7 @@ def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
 def compute_statistics(session: Session, start: date, end: date, today: date | None = None) -> StatisticsResult:
     today = today or date.today()
     batches = _batches_in_range(session, start, end)
-    total_liters = round(sum(b.target_volume_l or 0 for b in batches), 1)
+    total_liters = round(sum(_brewed_volume(b) or 0 for b in batches), 1)
     brew_day_count, avg_days_between_brew_days = _brew_day_stats(batches)
 
     return StatisticsResult(
