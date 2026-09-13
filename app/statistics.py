@@ -57,9 +57,10 @@ class VolumeShare:
 
 
 @dataclass
-class BatchColor:
-    label: str
-    ebc: float
+class ColorShare:
+    ebc: int
+    liters: float
+    batch_count: int
     hex: str
 
 
@@ -96,7 +97,7 @@ class StatisticsResult:
     monthly_volume: list[MonthlyVolume] = field(default_factory=list)
     style_usage: list[VolumeShare] = field(default_factory=list)
     fermentation_usage: list[VolumeShare] = field(default_factory=list)
-    color_distribution: list[BatchColor] = field(default_factory=list)
+    color_share: list[ColorShare] = field(default_factory=list)
     item_usage: dict[str, list[ItemUsage]] = field(default_factory=dict)
     stock_forecast: list[StockForecast] = field(default_factory=list)
 
@@ -168,8 +169,8 @@ def _volume_share(batches: list[Batch], key_fn) -> list[VolumeShare]:
 
 def _resolve_batch_color(batch: Batch) -> tuple[float, str] | None:
     """Schlanke Kopie der Farb-Ermittlung aus batch_calc.resolve_color_hex -
-    liefert zusaetzlich den EBC-Zahlenwert (fuer die Balkenhoehe), den die
-    Originalfunktion bewusst nicht nach aussen gibt."""
+    liefert zusaetzlich den EBC-Zahlenwert (fuer die Gruppierung nach
+    Farbe), den die Originalfunktion bewusst nicht nach aussen gibt."""
     color_ebc: float | None = None
     if (
         batch.target_volume_l
@@ -185,17 +186,26 @@ def _resolve_batch_color(batch: Batch) -> tuple[float, str] | None:
     return round(color_ebc, 1), formulas.ebc_to_hex(color_ebc)
 
 
-def _color_distribution(batches: list[Batch]) -> list[BatchColor]:
-    """Ein Balken je Sud statt einer Torte/Gruppierung: bei nur wenigen
-    Suden pro exaktem EBC-Wert wuerde eine Gruppierung kaum etwas
-    zusammenfassen. Farbe des Balkens = die tatsaechliche Bierfarbe des
-    jeweiligen Suds (wie das Bierkrug-Icon in Uebersicht/Detailseite)."""
-    result = []
+def _color_share(batches: list[Batch]) -> list[ColorShare]:
+    """Torte statt Balken je Sud (auf Wunsch nachtraeglich geaendert): Sude
+    mit derselben (auf ganze EBC gerundeten - so wird Farbe auch sonst in
+    der App angezeigt) Farbe landen in einer gemeinsamen Sektion, deren
+    Groesse sich aus der gebrauten Menge ergibt statt aus der Sud-Anzahl."""
+    totals: dict[int, float] = {}
+    counts: dict[int, int] = {}
     for b in batches:
         resolved = _resolve_batch_color(b)
-        if resolved:
-            ebc, hex_color = resolved
-            result.append(BatchColor(label=f"#{b.batch_number} {b.name}".strip(), ebc=ebc, hex=hex_color))
+        if not resolved:
+            continue
+        ebc, _ = resolved
+        ebc_rounded = round(ebc)
+        totals[ebc_rounded] = totals.get(ebc_rounded, 0.0) + (b.target_volume_l or 0)
+        counts[ebc_rounded] = counts.get(ebc_rounded, 0) + 1
+
+    result = [
+        ColorShare(ebc=e, liters=round(totals[e], 1), batch_count=counts[e], hex=formulas.ebc_to_hex(e))
+        for e in totals
+    ]
     result.sort(key=lambda c: c.ebc)
     return result
 
@@ -301,7 +311,7 @@ def compute_statistics(session: Session, start: date, end: date, today: date | N
         monthly_volume=_monthly_volume(batches, start, end),
         style_usage=_volume_share(batches, lambda b: (b.style or "").strip()),
         fermentation_usage=_volume_share(batches, lambda b: (b.fermentation_type or "").strip()),
-        color_distribution=_color_distribution(batches),
+        color_share=_color_share(batches),
         item_usage=_item_usage(batches),
         stock_forecast=_stock_forecast(session, today),
     )

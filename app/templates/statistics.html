@@ -42,7 +42,7 @@
   {% endif %}
 </div>
 
-{% if result.style_usage or result.color_distribution %}
+{% if result.style_usage or result.color_share %}
 <div class="stat-charts-grid">
   {% if result.style_usage %}
   <section class="card">
@@ -50,10 +50,10 @@
     <div class="chart-box"><canvas id="chart-style"></canvas></div>
   </section>
   {% endif %}
-  {% if result.color_distribution %}
+  {% if result.color_share %}
   <section class="card">
-    <h2>Bierfarben</h2>
-    <div class="chart-box" style="height: {{ 260 if result.color_distribution|length <= 10 else result.color_distribution|length * 24 }}px"><canvas id="chart-color"></canvas></div>
+    <h2>Menge nach Bierfarbe</h2>
+    <div class="chart-box"><canvas id="chart-color"></canvas></div>
   </section>
   {% endif %}
 </div>
@@ -194,26 +194,40 @@
   });
   {% endif %}
 
-  {% if result.color_distribution %}
+  {% if result.color_share %}
   new Chart(document.getElementById("chart-color"), {
-    type: "bar",
+    type: "pie",
     data: {
-      labels: {{ result.color_distribution|map(attribute='label')|list|tojson }},
+      labels: {{ result.color_share|map(attribute='ebc')|list|map('string')|list|tojson }},
       datasets: [{
-        label: "EBC",
-        data: {{ result.color_distribution|map(attribute='ebc')|list|tojson }},
-        backgroundColor: {{ result.color_distribution|map(attribute='hex')|list|tojson }},
+        data: {{ result.color_share|map(attribute='liters')|list|tojson }},
+        backgroundColor: {{ result.color_share|map(attribute='hex')|list|tojson }},
         borderColor: "#8a7a63",
         borderWidth: 1,
-        borderRadius: 3,
       }],
     },
     options: {
-      indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true, title: { display: true, text: "EBC" } } },
+      plugins: {
+        legend: {
+          labels: {
+            generateLabels: function (chart) {
+              return chart.data.labels.map(function (label, i) {
+                return { text: label + " EBC", fillStyle: chart.data.datasets[0].backgroundColor[i], strokeStyle: "#8a7a63", lineWidth: 1 };
+              });
+            },
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var counts = {{ result.color_share|map(attribute='batch_count')|list|tojson }};
+              return ctx.label + " EBC: " + ctx.parsed + " l (" + counts[ctx.dataIndex] + " Sude)";
+            },
+          },
+        },
+      },
     },
   });
   {% endif %}
