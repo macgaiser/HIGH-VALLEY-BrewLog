@@ -194,8 +194,24 @@ h1, h2, h3 {
 
 .topbar nav {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  /* Nie umbrechen, sondern bei Platzmangel lieber horizontal scrollen -
+     bei "Als Desktop-Seite anfordern" auf dem Handy (dabei meldet der
+     Browser eine Breite von ca. 980-1024px, greift also weder die
+     schmale Handy- noch eine bequeme Desktop-Darstellung) brach die Zeile
+     hier sonst in zwei Reihen um (Logo+Wortmarke beanspruchen zusammen
+     mit allen vier vollen Tab-Beschriftungen mehr als die verfuegbare
+     Breite in diesem Zwischenbereich), was hinter dem goldenen Rand hakelig
+     aussah. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  /* flex-start statt flex-end: in Kombination mit overflow-x:auto wuerde
+     flex-end ueberschuessigen Inhalt auf der Startseite (links) einfach
+     abschneiden statt ihn scrollbar zu machen (bekannte Eigenart von
+     Flexbox + Overflow) - mit flex-start bleibt bei zu wenig Platz
+     wenigstens "Sude" sofort sichtbar und der Rest laesst sich nach
+     rechts wegscrollen, statt dass ein Tab ohne jede Moeglichkeit,
+     ihn einzusehen, verschwindet. */
+  justify-content: flex-start;
   align-self: flex-end;
   gap: 0.6rem;
   margin-bottom: -0.9rem; /* hebt das Bottom-Padding von .topbar auf, damit die Tabs direkt an der goldenen Linie anliegen */
@@ -231,7 +247,7 @@ h1, h2, h3 {
   .brand-name, .brand-suffix { font-size: 1.2rem; }
   .brand-number { font-size: 0.4rem; }
   .topbar nav {
-    width: 100%; justify-content: flex-end; flex-wrap: nowrap;
+    width: 100%; justify-content: flex-start; flex-wrap: nowrap;
     overflow-x: auto; /* Sicherheitsnetz: lieber scrollbar als abgeschnitten, falls es doch mal eng wird */
     /* Kleiner Puffer hinter dem letzten Tab (Einstellungen), damit dessen
        Icon auf sehr schmalen Bildschirmen nicht optisch am Rand klebt. */
@@ -239,7 +255,17 @@ h1, h2, h3 {
   }
   .tab-nav { padding: 0.4rem 0.6rem 0.3rem; font-size: 0.85rem; gap: 0.35rem; flex-shrink: 0; }
   .tab-nav-icon { width: 22px; height: 22px; }
-  .tab-nav-settings .tab-nav-label { display: none; }
+  .tab-nav-settings .tab-nav-label, .tab-nav-stats .tab-nav-label { display: none; }
+}
+
+/* Zwischenbereich 701-1100px: weder die schmale Handy-Darstellung oben
+   noch von Haus aus genug Platz fuer Logo+Wortmarke plus alle vier vollen
+   Tab-Beschriftungen nebeneinander (siehe Kommentar bei .topbar nav) -
+   typischerweise "Als Desktop-Seite anfordern" auf dem Handy (meldet ca.
+   980-1024px). Blendet Statistik/Einstellungen wie im Handy-Modus nur als
+   Icon ein, damit alle vier Tabs ohne Scrollen in eine Zeile passen. */
+@media (min-width: 701px) and (max-width: 1100px) {
+  .tab-nav-settings .tab-nav-label, .tab-nav-stats .tab-nav-label { display: none; }
 }
 
 .container {
