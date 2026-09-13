@@ -84,6 +84,8 @@ class StatisticsResult:
     end: date
     total_liters: float
     batch_count: int
+    brew_day_count: int
+    avg_days_between_brew_days: float | None
     monthly_volume: list[MonthlyVolume] = field(default_factory=list)
     category_usage: list[CategoryUsage] = field(default_factory=list)
     item_usage: dict[str, list[ItemUsage]] = field(default_factory=dict)
@@ -93,6 +95,19 @@ class StatisticsResult:
 def _batches_in_range(session: Session, start: date, end: date) -> list[Batch]:
     all_batches = session.exec(select(Batch)).all()
     return [b for b in all_batches if b.brew_date and start <= b.brew_date <= end]
+
+
+def _brew_day_stats(batches: list[Batch]) -> tuple[int, float | None]:
+    """Anzahl unterschiedlicher Brautage und deren durchschnittlicher
+    Abstand in Tagen. Bewusst getrennt von der Sud-Anzahl: an manchen
+    Brautagen wurden zwei Sude parallel angesetzt (siehe Kommentar zu
+    Batch.batch_number), ein Brautag mit zwei Suden zaehlt hier trotzdem
+    nur einmal."""
+    unique_dates = sorted({b.brew_date for b in batches if b.brew_date})
+    if len(unique_dates) < 2:
+        return len(unique_dates), None
+    gaps = [(unique_dates[i] - unique_dates[i - 1]).days for i in range(1, len(unique_dates))]
+    return len(unique_dates), round(sum(gaps) / len(gaps), 1)
 
 
 def _monthly_volume(batches: list[Batch], start: date, end: date) -> list[MonthlyVolume]:
@@ -231,12 +246,15 @@ def compute_statistics(session: Session, start: date, end: date, today: date | N
     today = today or date.today()
     batches = _batches_in_range(session, start, end)
     total_liters = round(sum(b.target_volume_l or 0 for b in batches), 1)
+    brew_day_count, avg_days_between_brew_days = _brew_day_stats(batches)
 
     return StatisticsResult(
         start=start,
         end=end,
         total_liters=total_liters,
         batch_count=len(batches),
+        brew_day_count=brew_day_count,
+        avg_days_between_brew_days=avg_days_between_brew_days,
         monthly_volume=_monthly_volume(batches, start, end),
         category_usage=_category_usage(batches),
         item_usage=_item_usage(batches),

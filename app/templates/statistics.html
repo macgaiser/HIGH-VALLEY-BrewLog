@@ -21,7 +21,9 @@
 <div class="stat-grid">
   <div class="stat"><span class="stat-label">Gebraute Menge</span><span class="stat-value">{{ result.total_liters|fmt(1) }} l</span></div>
   <div class="stat"><span class="stat-label">Sude</span><span class="stat-value">{{ result.batch_count }}</span></div>
+  <div class="stat"><span class="stat-label">Brautage</span><span class="stat-value">{{ result.brew_day_count }}</span></div>
   <div class="stat"><span class="stat-label">Ø Menge / Sud</span><span class="stat-value">{{ (result.total_liters / result.batch_count)|fmt(1) if result.batch_count else "–" }} l</span></div>
+  <div class="stat"><span class="stat-label">Ø Abstand zwischen Brautagen</span><span class="stat-value">{{ result.avg_days_between_brew_days|fmt(0) ~ " Tage" if result.avg_days_between_brew_days is not none else "–" }}</span></div>
 </div>
 
 {% if result.batch_count == 0 %}
