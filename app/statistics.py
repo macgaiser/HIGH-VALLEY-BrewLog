@@ -21,6 +21,7 @@ from datetime import date, timedelta
 
 from sqlmodel import Session, select
 
+from app import formulas
 from app.models import Batch, InventoryCategory, InventoryItem
 
 MONTH_NAMES_DE = [
@@ -49,11 +50,17 @@ class MonthlyVolume:
 
 
 @dataclass
-class CategoryUsage:
-    category: str
+class VolumeShare:
     label: str
-    amount: float
-    unit: str
+    liters: float
+    batch_count: int
+
+
+@dataclass
+class BatchColor:
+    label: str
+    ebc: float
+    hex: str
 
 
 @dataclass
@@ -87,7 +94,9 @@ class StatisticsResult:
     brew_day_count: int
     avg_days_between_brew_days: float | None
     monthly_volume: list[MonthlyVolume] = field(default_factory=list)
-    category_usage: list[CategoryUsage] = field(default_factory=list)
+    style_usage: list[VolumeShare] = field(default_factory=list)
+    fermentation_usage: list[VolumeShare] = field(default_factory=list)
+    color_distribution: list[BatchColor] = field(default_factory=list)
     item_usage: dict[str, list[ItemUsage]] = field(default_factory=dict)
     stock_forecast: list[StockForecast] = field(default_factory=list)
 
@@ -137,23 +146,57 @@ def _monthly_volume(batches: list[Batch], start: date, end: date) -> list[Monthl
     return result
 
 
-def _category_usage(batches: list[Batch]) -> list[CategoryUsage]:
-    malz = sum(g.amount_kg or 0 for b in batches for g in b.grain_additions)
-    hopfen_g = sum(
-        h.amount_g or 0 for b in batches for h in b.hop_additions
-        if not (h.inventory_item and h.inventory_item.category == InventoryCategory.sonstiges)
-    ) + sum(d.amount_g or 0 for b in batches for d in b.dry_hop_additions)
-    sonstiges_g = sum(
-        h.amount_g or 0 for b in batches for h in b.hop_additions
-        if h.inventory_item and h.inventory_item.category == InventoryCategory.sonstiges
+def _volume_share(batches: list[Batch], key_fn) -> list[VolumeShare]:
+    """Gemeinsame Gruppierung fuer Bierstil- und Gaerart-Anteile: Menge und
+    Sud-Anzahl je Gruppe, absteigend nach Menge. Ein Malz/Hopfen-
+    Mengenvergleich (wie zuvor in einer gemeinsamen Grafik) ergab wenig
+    Sinn, da Hopfen mengenmaessig immer winzig gegen Malz wirkt - Bierstil
+    und Gaerart teilen sich dagegen dieselbe Einheit (Liter) und lassen
+    sich so sinnvoll gegenueberstellen."""
+    totals: dict[str, float] = {}
+    counts: dict[str, int] = {}
+    for b in batches:
+        key = key_fn(b) or "Unbekannt"
+        totals[key] = totals.get(key, 0.0) + (b.target_volume_l or 0)
+        counts[key] = counts.get(key, 0) + 1
+    return sorted(
+        [VolumeShare(label=k, liters=round(totals[k], 1), batch_count=counts[k]) for k in totals],
+        key=lambda v: v.liters,
+        reverse=True,
     )
+
+
+def _resolve_batch_color(batch: Batch) -> tuple[float, str] | None:
+    """Schlanke Kopie der Farb-Ermittlung aus batch_calc.resolve_color_hex -
+    liefert zusaetzlich den EBC-Zahlenwert (fuer die Balkenhoehe), den die
+    Originalfunktion bewusst nicht nach aussen gibt."""
+    color_ebc: float | None = None
+    if (
+        batch.target_volume_l
+        and batch.grain_additions
+        and all(g.inventory_item and g.inventory_item.color_ebc for g in batch.grain_additions)
+    ):
+        grain_colors = [(g.amount_kg or 0, g.inventory_item.color_ebc) for g in batch.grain_additions]
+        color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)
+    if not color_ebc and batch.color_ebc:
+        color_ebc = batch.color_ebc
+    if color_ebc is None:
+        return None
+    return round(color_ebc, 1), formulas.ebc_to_hex(color_ebc)
+
+
+def _color_distribution(batches: list[Batch]) -> list[BatchColor]:
+    """Ein Balken je Sud statt einer Torte/Gruppierung: bei nur wenigen
+    Suden pro exaktem EBC-Wert wuerde eine Gruppierung kaum etwas
+    zusammenfassen. Farbe des Balkens = die tatsaechliche Bierfarbe des
+    jeweiligen Suds (wie das Bierkrug-Icon in Uebersicht/Detailseite)."""
     result = []
-    if malz:
-        result.append(CategoryUsage("malz", CATEGORY_LABELS[InventoryCategory.malz], round(malz, 2), "kg"))
-    if hopfen_g:
-        result.append(CategoryUsage("hopfen", CATEGORY_LABELS[InventoryCategory.hopfen], round(hopfen_g, 1), "g"))
-    if sonstiges_g:
-        result.append(CategoryUsage("sonstiges", CATEGORY_LABELS[InventoryCategory.sonstiges], round(sonstiges_g, 1), "g"))
+    for b in batches:
+        resolved = _resolve_batch_color(b)
+        if resolved:
+            ebc, hex_color = resolved
+            result.append(BatchColor(label=f"#{b.batch_number} {b.name}".strip(), ebc=ebc, hex=hex_color))
+    result.sort(key=lambda c: c.ebc)
     return result
 
 
@@ -256,7 +299,9 @@ def compute_statistics(session: Session, start: date, end: date, today: date | N
         brew_day_count=brew_day_count,
         avg_days_between_brew_days=avg_days_between_brew_days,
         monthly_volume=_monthly_volume(batches, start, end),
-        category_usage=_category_usage(batches),
+        style_usage=_volume_share(batches, lambda b: (b.style or "").strip()),
+        fermentation_usage=_volume_share(batches, lambda b: (b.fermentation_type or "").strip()),
+        color_distribution=_color_distribution(batches),
         item_usage=_item_usage(batches),
         stock_forecast=_stock_forecast(session, today),
     )

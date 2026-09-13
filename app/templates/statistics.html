@@ -34,13 +34,30 @@
     <h2>Gebraute Menge</h2>
     <div class="chart-box"><canvas id="chart-volume"></canvas></div>
   </section>
-  {% if result.category_usage %}
+  {% if result.fermentation_usage %}
   <section class="card">
-    <h2>Zutatenverbrauch nach Kategorie</h2>
-    <div class="chart-box"><canvas id="chart-category"></canvas></div>
+    <h2>Menge nach Gärart</h2>
+    <div class="chart-box"><canvas id="chart-fermentation"></canvas></div>
   </section>
   {% endif %}
 </div>
+
+{% if result.style_usage or result.color_distribution %}
+<div class="stat-charts-grid">
+  {% if result.style_usage %}
+  <section class="card">
+    <h2>Menge nach Bierstil</h2>
+    <div class="chart-box"><canvas id="chart-style"></canvas></div>
+  </section>
+  {% endif %}
+  {% if result.color_distribution %}
+  <section class="card">
+    <h2>Bierfarben</h2>
+    <div class="chart-box" style="height: {{ 260 if result.color_distribution|length <= 10 else result.color_distribution|length * 24 }}px"><canvas id="chart-color"></canvas></div>
+  </section>
+  {% endif %}
+</div>
+{% endif %}
 
 {% if result.item_usage %}
 <div class="stat-charts-grid">
@@ -118,13 +135,13 @@
     },
   });
 
-  {% if result.category_usage %}
-  new Chart(document.getElementById("chart-category"), {
+  {% if result.fermentation_usage %}
+  new Chart(document.getElementById("chart-fermentation"), {
     type: "pie",
     data: {
-      labels: {{ result.category_usage|map(attribute='label')|list|tojson }},
+      labels: {{ result.fermentation_usage|map(attribute='label')|list|tojson }},
       datasets: [{
-        data: {{ result.category_usage|map(attribute='amount')|list|tojson }},
+        data: {{ result.fermentation_usage|map(attribute='liters')|list|tojson }},
         backgroundColor: ["#6b3417", "#6a9e34", "#f0be33", "#35a4c2"],
       }],
     },
@@ -135,12 +152,68 @@
         tooltip: {
           callbacks: {
             label: function (ctx) {
-              var units = {{ result.category_usage|map(attribute='unit')|list|tojson }};
-              return ctx.label + ": " + ctx.parsed + " " + units[ctx.dataIndex];
+              var counts = {{ result.fermentation_usage|map(attribute='batch_count')|list|tojson }};
+              return ctx.label + ": " + ctx.parsed + " l (" + counts[ctx.dataIndex] + " Sude)";
             },
           },
         },
       },
+    },
+  });
+  {% endif %}
+
+  {% if result.style_usage %}
+  new Chart(document.getElementById("chart-style"), {
+    type: "bar",
+    data: {
+      labels: {{ result.style_usage|map(attribute='label')|list|tojson }},
+      datasets: [{
+        label: "Liter",
+        data: {{ result.style_usage|map(attribute='liters')|list|tojson }},
+        backgroundColor: "#6a9e34",
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var counts = {{ result.style_usage|map(attribute='batch_count')|list|tojson }};
+              return ctx.parsed.x + " l (" + counts[ctx.dataIndex] + " Sude)";
+            },
+          },
+        },
+      },
+      scales: { x: { beginAtZero: true, title: { display: true, text: "Liter" } } },
+    },
+  });
+  {% endif %}
+
+  {% if result.color_distribution %}
+  new Chart(document.getElementById("chart-color"), {
+    type: "bar",
+    data: {
+      labels: {{ result.color_distribution|map(attribute='label')|list|tojson }},
+      datasets: [{
+        label: "EBC",
+        data: {{ result.color_distribution|map(attribute='ebc')|list|tojson }},
+        backgroundColor: {{ result.color_distribution|map(attribute='hex')|list|tojson }},
+        borderColor: "#8a7a63",
+        borderWidth: 1,
+        borderRadius: 3,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, title: { display: true, text: "EBC" } } },
     },
   });
   {% endif %}
