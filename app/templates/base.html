@@ -285,6 +285,10 @@ m-1870 -266 c9 -11 11 -37 7 -91 -3 -41 -12 -158 -21 -260 -38 -482 -39 -1448
     </nav>
   </header>
   <main class="container">
+    {% set _flash_error = request.query_params.get('error') %}
+    {% set _flash_success = request.query_params.get('success') %}
+    {% if _flash_error %}<p class="flash-message flash-error">{{ _flash_error }}</p>{% endif %}
+    {% if _flash_success %}<p class="flash-message flash-success">{{ _flash_success }}</p>{% endif %}
     {% block content %}{% endblock %}
   </main>
   <footer class="app-footer">
