@@ -1,11 +1,13 @@
 import re
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
+from app.beerxml import BeerXmlParseError, create_batch_from_recipe, parse_recipes_xml
 from app.database import BACKGROUND_IMAGE_DIR, BORDER_GRAPHIC_DIR, LOGO_DIR, get_session
 from app.models import Batch, BackgroundImage, BeerStyle, BorderGraphic, DefaultBrewDayTask, Logo, Settings, WaterProfile
 from app.templating import templates
@@ -94,6 +96,28 @@ async def settings_beer_styles_save(request: Request, session: Session = Depends
 
     session.commit()
     return RedirectResponse("/settings", status_code=303)
+
+
+@router.post("/import-beerxml")
+async def settings_import_beerxml(session: Session = Depends(get_session), file: UploadFile = File(...)):
+    """Bulk-Import der bisherigen Rezept-Bibliothek (Umstieg von anderer
+    Brausoftware): eine BeerXML-Datei kann mehrere <RECIPE>-Eintraege
+    enthalten, jeder wird als eigener neuer Sud angelegt (fortlaufende
+    Sud-Nummer). Fuer den spontanen Einzelimport beim Neuanlegen siehe
+    /batches/import-beerxml."""
+    data = await file.read()
+    try:
+        recipes = parse_recipes_xml(data)
+    except BeerXmlParseError as exc:
+        return RedirectResponse(f"/settings?error={quote(str(exc))}", status_code=303)
+
+    next_number = (session.exec(select(Batch.batch_number).order_by(Batch.batch_number.desc())).first() or 0) + 1
+    for recipe in recipes:
+        create_batch_from_recipe(session, recipe, next_number)
+        next_number += 1
+
+    msg = f"{len(recipes)} Rezept{'e' if len(recipes) != 1 else ''} importiert."
+    return RedirectResponse(f"/batches?success={quote(msg)}", status_code=303)
 
 
 @router.post("/logos")

@@ -20,6 +20,17 @@
 
 <h1>{{ "Sud #%d bearbeiten"|format(batch.batch_number) if batch else "Neuer Sud" }}</h1>
 
+{% if not batch %}
+<section class="card">
+  <h2>Rezept aus BeerXML importieren</h2>
+  <p class="hint">Lädt Schüttung, Hopfengaben, Hefe und Maischplan aus einer BeerXML-Datei vor (Export z.B. aus Brewfather, BeerSmith, Brewer's Friend oder Brewtarget) – Brautag und Messwerte trägst du danach wie gewohnt selbst nach.</p>
+  <form method="post" action="/batches/import-beerxml" enctype="multipart/form-data" class="inline-form">
+    <input type="file" name="file" accept=".xml,application/xml,text/xml" required>
+    <button class="btn" type="submit">Importieren</button>
+  </form>
+</section>
+{% endif %}
+
 <form method="post" action="{{ '/batches/%d/edit'|format(batch.id) if batch else '/batches/new' }}">
 
   <section class="card">

@@ -1,11 +1,12 @@
 from datetime import date, datetime, timedelta
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from sqlmodel import Session, select
 
 from app.batch_calc import compute_metrics, resolve_color_hex
-from app.beerxml import build_recipe_xml
+from app.beerxml import BeerXmlParseError, build_recipe_xml, create_batch_from_recipe, parse_recipes_xml
 from app.database import get_session
 from app.inventory import sync_batch_deductions
 from app.models import (
@@ -256,6 +257,24 @@ def batch_new_form(request: Request, session: Session = Depends(get_session)):
             "water_profiles": water_profiles,
         },
     )
+
+
+@router.post("/import-beerxml")
+async def batch_import_beerxml(session: Session = Depends(get_session), file: UploadFile = File(...)):
+    """Spontaner Einzel-Import beim Neuanlegen eines Suds: importiert nur das
+    ERSTE Rezept aus der Datei und leitet direkt auf dessen Bearbeiten-Seite
+    weiter, wo Brautag/Messwerte ergänzt werden können. Für den Bulk-Import
+    einer ganzen Rezept-Bibliothek auf einmal siehe /settings/import-beerxml."""
+    data = await file.read()
+    try:
+        recipes = parse_recipes_xml(data)
+    except BeerXmlParseError as exc:
+        return RedirectResponse(f"/batches/new?error={quote(str(exc))}", status_code=303)
+
+    next_number = (session.exec(select(Batch.batch_number).order_by(Batch.batch_number.desc())).first() or 0) + 1
+    batch = create_batch_from_recipe(session, recipes[0], next_number)
+    msg = "Rezept importiert – bitte Brautag und Messwerte ergänzen."
+    return RedirectResponse(f"/batches/{batch.id}/edit?success={quote(msg)}", status_code=303)
 
 
 async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:

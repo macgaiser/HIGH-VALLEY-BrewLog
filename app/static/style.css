@@ -1021,6 +1021,16 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
 
 .hint { color: var(--muted); font-size: 0.85rem; }
 
+.flash-message {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+.flash-error { color: var(--danger); border-color: var(--danger); background: #fbeceb; }
+.flash-success { color: var(--green); border-color: var(--green); background: #eef7ef; }
+
 .badge-locked {
   display: inline-block;
   margin: 0.4rem 0 0;
