@@ -548,6 +548,41 @@ tr.row-low-stock { background: rgba(179, 57, 44, 0.08); }
 tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
 .stock-remaining-warn { color: var(--danger); font-weight: 600; }
 
+/* Kategorie-Reiter der Lagerbestand-Reichweite: bewusst wie Ordner-Register
+   gestaltet (aktiver Reiter "verschmilzt" mit dem Panel darunter durch die
+   gleiche Hintergrundfarbe und den ueberlappenden Rand), damit auf einen
+   Blick klar ist, welche Kategorie gerade ausgewaehlt ist. */
+.stock-category-tabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.8rem; }
+.stock-category-tab {
+  padding: 0.45rem 1rem;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.stock-category-tab:hover { background: var(--border); color: var(--brown); }
+.stock-category-tab.active {
+  background: var(--card-bg);
+  color: var(--brown);
+  border-color: var(--gold);
+  border-bottom: 2px solid var(--card-bg);
+  margin-bottom: -2px;
+  position: relative;
+  z-index: 1;
+}
+.stock-category-panel {
+  border: 2px solid var(--gold);
+  border-radius: 0 8px 8px 8px;
+  background: var(--card-bg);
+  padding: 0.8rem;
+}
+.stock-category-panel .table-scroll { margin: 0; }
+
 .beer-color-icon {
   display: inline-block;
   width: 1.3rem;
