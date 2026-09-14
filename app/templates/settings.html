@@ -29,7 +29,7 @@
 
 <section class="card">
   <h2>Sude aus BeerXML importieren <button type="button" class="info-btn" data-info-toggle="beerxml-import-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
-  <p class="hint info-popover" id="beerxml-import-hint" hidden>Zum Umstieg von anderer Brausoftware (Brewfather, BeerSmith, Brewer's Friend, Brewtarget u.a.): eine BeerXML-Datei kann mehrere Rezepte enthalten, jedes wird als eigener neuer Sud mit fortlaufender Sud-Nr. angelegt. BeerXML enthält nur Rezeptdaten (Schüttung, Hopfengaben, Hefe, Maischplan, Zielwerte) - Brautag, Messwerte und Kommentare trägst du danach je Sud selbst nach.</p>
+  <p class="hint info-popover" id="beerxml-import-hint" hidden>Zum Umstieg von anderer Brausoftware: eine BeerXML-Datei kann mehrere Rezepte enthalten, jedes wird als eigener neuer Sud mit fortlaufender Sud-Nr. angelegt. BeerXML enthält nur Rezeptdaten (Schüttung, Hopfengaben, Hefe, Maischplan, Zielwerte) - Brautag, Messwerte und Kommentare trägst du danach je Sud selbst nach.</p>
   <form method="post" action="/settings/import-beerxml" enctype="multipart/form-data" class="inline-form">
     <input type="file" name="file" accept=".xml,application/xml,text/xml" required>
     <button class="btn" type="submit">Importieren</button>
