@@ -51,6 +51,14 @@ def _background_image_url() -> str:
 
 templates.env.globals["background_image_url"] = _background_image_url
 
+# Vom Docker-Build gesetzter Git-Commit-Hash (siehe Dockerfile ARG GIT_SHA /
+# .github/workflows/docker-publish.yml) - fuer die Fusszeile, damit man auf
+# der laufenden Instanz sieht welcher Stand deployed ist (nuetzlich mit
+# Watchtower-Auto-Update). Ausserhalb von Docker (lokaler Dev-Server) gibt es
+# keinen Build-Schritt, der das setzen wuerde, daher der "dev"-Fallback.
+templates.env.globals["app_version"] = os.environ.get("APP_VERSION", "dev")
+templates.env.globals["github_repo_url"] = "https://github.com/macgaiser/HIGH-VALLEY-BrewLog"
+
 
 def _fmt(value, decimals: int = 1) -> str:
     if value is None:
