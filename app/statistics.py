@@ -37,6 +37,16 @@ CATEGORY_LABELS = {
     InventoryCategory.sonstiges: "Sonstiges",
 }
 
+# Bestellempfehlungen auf uebliche Bestellschritte aufrunden statt krumme
+# Kommazahlen auszugeben (Malz wird in kg-Schritten bestellt, Hopfen in
+# 100g-Schritten - jeweils in der Einheit, in der die Kategorie im
+# Lagerbestand gefuehrt wird). Hefe/Sonstiges bewusst ohne Rundung, da es
+# dafuer keinen einheitlichen Bestellschritt gibt.
+ORDER_ROUNDING_STEP = {
+    InventoryCategory.malz: 1.0,
+    InventoryCategory.hopfen: 100.0,
+}
+
 # Reine Schätzwerte, bewusst nicht einstellbar - Ziel-Reichweite, auf die die
 # Bestellempfehlung auffüllt, und Schwelle, ab der eine Zutat in der
 # Übersicht als "bald nachbestellen" markiert wird.
@@ -426,6 +436,9 @@ def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
             target_stock = uses_for_target * avg_amount_per_use
             if item.amount < target_stock:
                 recommended = round(target_stock - item.amount, 2)
+                step = ORDER_ROUNDING_STEP.get(item.category)
+                if step:
+                    recommended = math.ceil(recommended / step) * step
 
         results.append(
             StockForecast(
