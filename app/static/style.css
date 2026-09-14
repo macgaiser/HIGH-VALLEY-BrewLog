@@ -513,7 +513,11 @@ tr.row-selected:hover { background: rgba(240, 190, 51, 0.3); }
 .stat-period-custom { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.6rem; }
 .stat-period-custom .field { display: flex; flex-direction: column; }
 .stat-period-custom .field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.2rem; }
-.stat-period-custom input[type="date"] {
+/* flatpickr ersetzt das sichtbare Feld durch ein eigenes input.form-control
+   (type="text", kein type="date" mehr) und versteckt das Original per
+   type="hidden" - deshalb hier wie bei .field-row ohne Typ-Selektor, sonst
+   greift die Gestaltung nur auf das unsichtbare Original-Feld. */
+.stat-period-custom .field input {
   width: auto;
   padding: 0.5rem;
   border: 1px solid var(--border);
