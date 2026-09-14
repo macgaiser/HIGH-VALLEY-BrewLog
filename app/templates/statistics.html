@@ -77,6 +77,13 @@
   <h2>Lagerbestand-Reichweite <button type="button" class="info-btn" data-info-toggle="stock-forecast-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
   <p class="hint info-popover" id="stock-forecast-hint" hidden>Reichweite = wie viele weitere Verwendungen in typischer Sud-Menge der aktuelle Bestand noch hergibt - nicht einfach Bestand geteilt durch Monatsdurchschnitt, damit ein Sud, der auf einen Schlag viel verbraucht, die Reichweite nicht künstlich hoch rechnet. Die typische Menge je Verwendung wird aus der gesamten Sud-Historie geschätzt. Für den Zeitpunkt der nächsten Verwendung erkennt die App wiederkehrende saisonale Muster (z.B. "jedes Jahr im Winter"), sofern eine Zutat in mindestens {{ seasonal_min_years|fmt(0) }} verschiedenen Jahren im selben Kalendermonat vorkam - sonst zählt der Abstand der Verwendungen im letzten Jahr, da sich gebraute Bierstile über die Zeit verändern. Eine Reichweiten-/Bestellempfehlung gibt es nur für Zutaten mit mindestens {{ min_uses_for_forecast|fmt(0) }} Verwendungen, deren letzte nicht länger als {{ stale_use_cutoff_months|fmt(0) }} Monate her ist - sonst wäre die Empfehlung nur Rauschen von längst nicht mehr gebrauchten oder nur einmalig getesteten Zutaten. Eine grobe Schätzung, kein exakter Wert. Die Bestellempfehlung füllt auf so viele weitere typische Verwendungen auf, wie in eine Ziel-Reichweite von {{ target_coverage_months|fmt(0) }} Monaten passen, Zutaten mit weniger als {{ low_stock_threshold_months|fmt(0) }} Monaten Reichweite sind hervorgehoben.</p>
   {% if result.stock_forecast %}
+  <div class="stock-category-tabs" role="tablist">
+    <button type="button" class="stock-category-tab active" data-stock-category="alle">Alle</button>
+    {% for cat in stock_categories %}
+    <button type="button" class="stock-category-tab" data-stock-category="{{ cat }}">{{ cat }}</button>
+    {% endfor %}
+  </div>
+  <div class="stock-category-panel">
   <div class="table-scroll">
   <table class="table">
     <thead>
@@ -89,9 +96,9 @@
         <th>Bestellempfehlung</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="stock-forecast-body">
       {% for f in result.stock_forecast %}
-      <tr class="{{ 'row-low-stock' if f.low_stock else '' }}">
+      <tr class="{{ 'row-low-stock' if f.low_stock else '' }}" data-stock-category="{{ f.category }}">
         <td>{{ f.name }}</td>
         <td>{{ f.category }}</td>
         <td{% if f.depleted %} class="stock-remaining-warn"{% endif %}>{{ f.current_amount|fmt(2) }} {{ f.unit }}</td>
@@ -103,6 +110,23 @@
     </tbody>
   </table>
   </div>
+  </div>
+  <script>
+    (function () {
+      var tabs = document.querySelectorAll("[data-stock-category].stock-category-tab");
+      var rows = document.querySelectorAll("#stock-forecast-body tr");
+      tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          tabs.forEach(function (t) { t.classList.remove("active"); });
+          tab.classList.add("active");
+          var wanted = tab.getAttribute("data-stock-category");
+          rows.forEach(function (row) {
+            row.hidden = wanted !== "alle" && row.getAttribute("data-stock-category") !== wanted;
+          });
+        });
+      });
+    })();
+  </script>
   {% else %}
   <p class="hint">Noch keine Lagerartikel angelegt.</p>
   {% endif %}

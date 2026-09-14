@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.models import Batch
 from app.statistics import (
+    CATEGORY_LABELS,
     LOW_STOCK_THRESHOLD_MONTHS,
     MIN_USES_FOR_FORECAST,
     SEASONAL_MIN_YEARS,
@@ -65,6 +66,12 @@ def statistics_page(
     start, end, resolved_preset = _resolve_range(preset, date_from, date_to, earliest, today)
     result = compute_statistics(session, start, end, today)
 
+    # Reiter fuer die Lagerbestand-Reichweite: feste Kategorie-Reihenfolge
+    # (wie ueberall sonst in der App), aber nur Kategorien, die tatsaechlich
+    # Lagerartikel enthalten - kein leerer "Sonstiges"-Reiter ohne Inhalt.
+    present_categories = {f.category for f in result.stock_forecast}
+    stock_categories = [label for label in CATEGORY_LABELS.values() if label in present_categories]
+
     return templates.TemplateResponse(
         "statistics.html",
         {
@@ -79,5 +86,6 @@ def statistics_page(
             "seasonal_min_years": SEASONAL_MIN_YEARS,
             "min_uses_for_forecast": MIN_USES_FOR_FORECAST,
             "stale_use_cutoff_months": STALE_USE_CUTOFF_MONTHS,
+            "stock_categories": stock_categories,
         },
     )
