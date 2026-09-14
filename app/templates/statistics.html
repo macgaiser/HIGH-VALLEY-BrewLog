@@ -12,8 +12,8 @@
     {% endfor %}
   </form>
   <form class="stat-period-custom" method="get" action="/statistics">
-    <label>von <input type="date" name="date_from" value="{{ date_from }}"></label>
-    <label>bis <input type="date" name="date_to" value="{{ date_to }}"></label>
+    <div class="field"><label>von</label><input type="date" name="date_from" value="{{ date_from }}"></div>
+    <div class="field"><label>bis</label><input type="date" name="date_to" value="{{ date_to }}"></div>
     <button class="btn" type="submit">Anwenden</button>
   </form>
 </div>

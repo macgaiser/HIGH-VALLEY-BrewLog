@@ -622,6 +622,15 @@ def batch_edit_form(batch_id: int, request: Request, session: Session = Depends(
         and batch.brew_date
         and batch.brew_date < date.today() - timedelta(days=INVENTORY_LOCK_SUGGESTION_AGE_DAYS)
     )
+    prev_batch = None
+    next_batch = None
+    if batch:
+        prev_batch = session.exec(
+            select(Batch).where(Batch.batch_number < batch.batch_number).order_by(Batch.batch_number.desc())
+        ).first()
+        next_batch = session.exec(
+            select(Batch).where(Batch.batch_number > batch.batch_number).order_by(Batch.batch_number.asc())
+        ).first()
     return templates.TemplateResponse(
         "batch_form.html",
         {
@@ -634,6 +643,8 @@ def batch_edit_form(batch_id: int, request: Request, session: Session = Depends(
             "beer_styles": beer_styles,
             "water_profiles": water_profiles,
             "suggest_inventory_lock": suggest_inventory_lock,
+            "prev_batch": prev_batch,
+            "next_batch": next_batch,
         },
     )
 

@@ -18,7 +18,23 @@
 </select>
 {% endmacro %}
 
-<h1>{{ "Sud #%d bearbeiten"|format(batch.batch_number) if batch else "Neuer Sud" }}</h1>
+<div class="page-header">
+  <h1>{{ "Sud #%d bearbeiten"|format(batch.batch_number) if batch else "Neuer Sud" }}</h1>
+  {% if batch %}
+  <div class="actions batch-pager">
+    {% if prev_batch %}
+    <a class="btn" href="/batches/{{ prev_batch.id }}/edit" title="Sud #{{ prev_batch.batch_number }}">‹ Vorheriger Sud</a>
+    {% else %}
+    <span class="btn btn-disabled">‹ Vorheriger Sud</span>
+    {% endif %}
+    {% if next_batch %}
+    <a class="btn" href="/batches/{{ next_batch.id }}/edit" title="Sud #{{ next_batch.batch_number }}">Nächster Sud ›</a>
+    {% else %}
+    <span class="btn btn-disabled">Nächster Sud ›</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
 
 <form method="post" action="{{ '/batches/%d/edit'|format(batch.id) if batch else '/batches/new' }}">
 
