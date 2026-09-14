@@ -267,3 +267,23 @@ Alle Routen (außer `/healthz`) erfordern HTTP Basic Auth.
 | GET/POST | `/inventory/{id}/edit` | Lagerartikel bearbeiten |
 | POST | `/inventory/{id}/restock` | Bestand zu-/abbuchen |
 | GET/POST | `/settings` | Kosten- und Berechnungseinstellungen |
+
+## Lizenz
+
+Der Quellcode steht unter der [Business Source License 1.1](LICENSE)
+(BSL) - er ist frei einsehbar und darf kostenlos selbst gehostet werden
+(auch per Docker), inkl. Veränderung für den eigenen Gebrauch. Nicht
+erlaubt ist ohne Zustimmung des Lizenzgebers, daraus ein eigenes
+kommerzielles Produkt (z.B. ein fertig gepackter Installer) zu bauen und
+zu verkaufen - siehe die genauen Bedingungen im "Additional Use Grant" der
+`LICENSE`-Datei.
+
+Die Lizenz enthält ein **Change Date** (aktuell 2030-09-14), ab dem der zu
+diesem Zeitpunkt veröffentlichte Code automatisch unter die freizügigere
+MIT-Lizenz fällt. Das BSL-1.1-Regelwerk selbst begrenzt den Schutz pro
+Version zusätzlich auf maximal 4 Jahre ab deren Erstveröffentlichung
+("whichever comes first"). Bei künftigen größeren Releases wird die
+`LICENSE`-Datei entsprechend aktualisiert (neue Versionsnummer + neues
+Change Date, wieder max. 4 Jahre in der Zukunft), um den Schutz für den
+dann neu hinzugekommenen Code zu verlängern - bereits veröffentlichter
+älterer Code bleibt dabei bei seinem ursprünglichen Stichtag.
