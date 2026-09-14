@@ -315,6 +315,7 @@ h1, h2, h3 {
 .btn-danger { background: white; color: var(--danger); border-color: var(--danger); }
 .btn-danger:hover { background: #fbeceb; }
 .btn-small { padding: 0.25rem 0.7rem; font-size: 0.85rem; border-radius: 999px; }
+.btn-disabled { opacity: 0.45; cursor: default; pointer-events: none; }
 .row-move { display: flex; gap: 0.2rem; white-space: nowrap; }
 .row-move .btn-small { padding: 0.25rem 0.5rem; line-height: 1; }
 
@@ -509,9 +510,17 @@ tr.row-selected:hover { background: rgba(240, 190, 51, 0.3); }
 /* Statistik-Seite */
 .stat-period-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; margin: 1rem 0; }
 .stat-period-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.stat-period-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-.stat-period-custom label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; color: var(--muted); }
-.stat-period-custom input[type="date"] { width: auto; }
+.stat-period-custom { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.6rem; }
+.stat-period-custom .field { display: flex; flex-direction: column; }
+.stat-period-custom .field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.2rem; }
+.stat-period-custom input[type="date"] {
+  width: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
 .stat-charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
