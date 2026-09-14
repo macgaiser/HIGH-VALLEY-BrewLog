@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup
@@ -51,13 +52,28 @@ def _background_image_url() -> str:
 
 templates.env.globals["background_image_url"] = _background_image_url
 
-# Vom Docker-Build gesetzter Git-Commit-Hash (siehe Dockerfile ARG GIT_SHA /
-# .github/workflows/docker-publish.yml) - fuer die Fusszeile, damit man auf
-# der laufenden Instanz sieht welcher Stand deployed ist (nuetzlich mit
-# Watchtower-Auto-Update). Ausserhalb von Docker (lokaler Dev-Server) gibt es
-# keinen Build-Schritt, der das setzen wuerde, daher der "dev"-Fallback.
-templates.env.globals["app_version"] = os.environ.get("APP_VERSION", "dev")
-templates.env.globals["github_repo_url"] = "https://github.com/macgaiser/HIGH-VALLEY-BrewLog"
+# Vom Docker-Build gesetzte Versionsangabe (siehe Dockerfile ARG
+# APP_VERSION_REF / .github/workflows/docker-publish.yml) - fuer die
+# Fusszeile, damit man auf der laufenden Instanz sieht welcher Stand
+# deployed ist (nuetzlich mit Watchtower-Auto-Update). Ist entweder ein
+# Versions-Tag (z.B. "v1.0.0", wenn der gebaute Commit eins traegt) oder die
+# volle Commit-SHA (Normalfall bei jedem Merge nach main, siehe LICENSE zur
+# Versionierung generell). Ausserhalb von Docker (lokaler Dev-Server) gibt
+# es keinen Build-Schritt, der das setzen wuerde, daher der "dev"-Fallback.
+_GITHUB_REPO_URL = "https://github.com/macgaiser/HIGH-VALLEY-BrewLog"
+_raw_app_version = os.environ.get("APP_VERSION", "dev")
+_is_version_tag = bool(re.match(r"^v\d", _raw_app_version))
+
+templates.env.globals["app_version"] = _raw_app_version
+templates.env.globals["github_repo_url"] = _GITHUB_REPO_URL
+templates.env.globals["app_version_label"] = _raw_app_version if _is_version_tag else _raw_app_version[:7]
+templates.env.globals["app_version_url"] = (
+    f"{_GITHUB_REPO_URL}/releases/tag/{_raw_app_version}"
+    if _is_version_tag
+    else f"{_GITHUB_REPO_URL}/commit/{_raw_app_version}"
+    if _raw_app_version != "dev"
+    else None
+)
 
 
 def _fmt(value, decimals: int = 1) -> str:
