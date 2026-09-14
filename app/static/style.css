@@ -1031,6 +1031,14 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
 .flash-error { color: var(--danger); border-color: var(--danger); background: #fbeceb; }
 .flash-success { color: var(--green); border-color: var(--green); background: #eef7ef; }
 
+.beerxml-import-line { margin: -0.6rem 0 1rem; font-size: 0.85rem; color: var(--muted); }
+.beerxml-import-line label {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.beerxml-import-line label:hover { color: var(--brown); }
+
 .badge-locked {
   display: inline-block;
   margin: 0.4rem 0 0;
