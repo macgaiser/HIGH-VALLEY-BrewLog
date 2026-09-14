@@ -257,35 +257,73 @@ def _item_usage(batches: list[Batch], top_n: int = 10) -> dict[str, list[ItemUsa
     return result
 
 
+# Mindestanzahl unterschiedlicher Jahre, in denen eine Zutat im selben
+# Kalendermonat verwendet wurde, damit das als wiederkehrendes saisonales
+# Muster gilt (statt Zufall) - siehe _seasonal_months() unten.
+SEASONAL_MIN_YEARS = 2
+
+
+def _next_occurrence(after: date, months: list[int]) -> date:
+    """Naechster 15. eines der gegebenen Kalendermonate, ab (inklusive)
+    "after" - faellt bei Bedarf ins naechste Jahr, wenn alle Monate dieses
+    Jahr schon vorbei sind."""
+    candidates = []
+    for m in months:
+        for year in (after.year, after.year + 1):
+            candidate = date(year, m, 15)
+            if candidate >= after:
+                candidates.append(candidate)
+    return min(candidates)
+
+
+def _seasonal_months(dates: list[date]) -> list[int]:
+    """Kalendermonate, in denen eine Zutat in mindestens SEASONAL_MIN_YEARS
+    verschiedenen Jahren verwendet wurde - ein einfacher, aber robuster
+    Hinweis auf einen wiederkehrenden Jahresrhythmus (z.B. "jedes Jahr im
+    Winter ein Bockbier"), ohne bei ein, zwei zufaelligen Treffern schon
+    ein Muster zu unterstellen."""
+    month_years: dict[int, set[int]] = {}
+    for d in dates:
+        month_years.setdefault(d.month, set()).add(d.year)
+    return sorted(m for m, years in month_years.items() if len(years) >= SEASONAL_MIN_YEARS)
+
+
 def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
     """Reichweiten-Schaetzung je Lagerartikel.
 
     Verbrauch passiert nicht gleichmaessig ueber die Zeit, sondern in
     Schueben - jeweils die fuer einen Sud benoetigte Menge, mit teils sehr
-    unregelmaessigen Abstaenden dazwischen. Eine reine Division durch 12
-    Monate wuerde das verwischen: zwei Sude kurz hintereinander mit
-    zusammen 5kg saehen dann wie "2,5kg pro Monat, also entspannt" aus,
+    unregelmaessigen Abstaenden dazwischen. Eine reine Division durch einen
+    Monatsdurchschnitt wuerde das verwischen: zwei Sude kurz hintereinander
+    mit zusammen 5kg saehen dann wie "2,5kg pro Monat, also entspannt" aus,
     obwohl der eigentlich entscheidende Punkt ist, ob der Bestand fuer den
-    naechsten Sud in typischer Groessenordnung noch reicht. Die Reichweite
-    wird deshalb ueber die Anzahl weiterer "typischer Verwendungen" simuliert,
-    die der aktuelle Bestand noch hergibt, multipliziert mit dem
-    durchschnittlichen Abstand zwischen bisherigen Verwendungen - nicht als
-    stetiger Verbrauch, sondern als Abfolge diskreter, sud-grosser Entnahmen.
-    """
-    window_start = today - timedelta(days=365)
-    recent = _batches_in_range(session, window_start, today)
+    naechsten Sud in typischer Groessenordnung noch reicht.
 
-    usage: dict[int, float] = {}
-    use_dates: dict[int, list[date]] = {}
+    Zwei Datenquellen dafuer, bewusst getrennt:
+    - Die TYPISCHE MENGE je Verwendung wird aus der GESAMTEN Sud-Historie
+      berechnet (nicht nur den letzten 12 Monaten) - mehr Datenpunkte ergeben
+      eine stabilere Schaetzung, wie viel ein Sud mit dieser Zutat typischerweise
+      braucht.
+    - Der ZEITPUNKT der naechsten Verwendung wird nach Moeglichkeit aus einem
+      wiederkehrenden saisonalen Muster abgeleitet (siehe _seasonal_months):
+      taucht eine Zutat jedes Jahr in aehnlichen Monaten auf, wird der naechste
+      anstehende dieser Monate als naechster Bedarf angenommen, nicht ein
+      stumpfer Durchschnittsabstand. Ohne erkennbares Muster faellt die
+      Schaetzung auf den Abstand der Verwendungen im letzten Jahr zurueck -
+      bewusst nur das letzte Jahr, nicht die gesamte Historie, da sich
+      gebraute Bierstile ueber die Zeit veraendern und aeltere Abstaende dann
+      wenig ueber die Zukunft aussagen.
+    """
+    all_batches = session.exec(select(Batch)).all()
+
+    events: dict[int, list[tuple[date, float]]] = {}
 
     def _record(item_id: int | None, amount: float | None, brew_date: date | None) -> None:
-        if not item_id:
+        if not item_id or not brew_date:
             return
-        usage[item_id] = usage.get(item_id, 0.0) + (amount or 0)
-        if brew_date:
-            use_dates.setdefault(item_id, []).append(brew_date)
+        events.setdefault(item_id, []).append((brew_date, amount or 0.0))
 
-    for b in recent:
+    for b in all_batches:
         for g in b.grain_additions:
             _record(g.inventory_item_id, g.amount_kg, b.brew_date)
         for h in b.hop_additions:
@@ -295,33 +333,59 @@ def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
         for y in b.yeast_additions:
             _record(y.inventory_item_id, y.amount, b.brew_date)
 
+    recent_cutoff = today - timedelta(days=365)
     items = session.exec(select(InventoryItem)).all()
     results: list[StockForecast] = []
     for item in items:
-        used = usage.get(item.id, 0.0)
-        avg_monthly = round(used / 12, 3) if used > 0 else None
+        item_events = sorted(events.get(item.id, []))
+        dates_all = [d for d, _ in item_events]
+        used_all = sum(a for _, a in item_events)
+        # "Ø Verbrauch/Monat" bleibt bewusst eine reine Momentaufnahme der
+        # letzten 12 Monate (zeigt den aktuellen Trend), waehrend Reichweite/
+        # Bestellempfehlung unten die gesamte Historie fuer die Mengen-
+        # Schaetzung nutzen.
+        used_recent = sum(a for d, a in item_events if d >= recent_cutoff)
+        avg_monthly = round(used_recent / 12, 3) if used_recent > 0 else None
+
         months_remaining: float | None = None
         recommended = 0.0
 
-        dates = sorted(use_dates.get(item.id, []))
-        if used > 0 and dates:
-            avg_amount_per_use = used / len(dates)
-            if len(dates) >= 2:
-                span_days = (dates[-1] - dates[0]).days
-                avg_interval_days = span_days / (len(dates) - 1) if span_days > 0 else 365 / len(dates)
-            else:
-                # Nur eine Verwendung im 12-Monats-Fenster: kein echter
-                # Abstand ermittelbar, jaehrlicher Rhythmus als einzig
-                # verfuegbare Annahme.
-                avg_interval_days = 365.0
+        if used_all > 0 and dates_all:
+            avg_amount_per_use = used_all / len(dates_all)
+            seasonal_months = _seasonal_months(dates_all)
 
-            # Ein bereits (durch Verbuchen ueber den vorhandenen Bestand
-            # hinaus) negativer Bestand wuerde sonst eine negative
-            # "Reichweite" ergeben - fachlich ist das schlicht
-            # "aufgebraucht", nicht "seit X Monaten im Minus".
-            available = max(0.0, item.amount)
-            full_uses_covered = math.floor(available / avg_amount_per_use)
-            months_remaining = round(full_uses_covered * avg_interval_days / 30.44, 1)
+            if seasonal_months:
+                avg_interval_days = 365 / len(seasonal_months)
+                # Diskrete Simulation entlang der erwarteten saisonalen
+                # Termine (nicht entlang gleichmaessiger Abstaende): wie
+                # viele dieser Termine deckt der aktuelle Bestand noch ab,
+                # bevor er nicht mehr fuer eine typische Sud-Menge reicht.
+                available = max(0.0, item.amount)
+                cursor = _next_occurrence(today, seasonal_months)
+                while available - avg_amount_per_use >= 0:
+                    available -= avg_amount_per_use
+                    cursor = _next_occurrence(cursor + timedelta(days=1), seasonal_months)
+                months_remaining = round((cursor - today).days / 30.44, 1)
+            else:
+                relevant_dates = [d for d in dates_all if d >= recent_cutoff] or dates_all
+                if len(relevant_dates) >= 2:
+                    span_days = (relevant_dates[-1] - relevant_dates[0]).days
+                    avg_interval_days = (
+                        span_days / (len(relevant_dates) - 1) if span_days > 0 else 365 / len(relevant_dates)
+                    )
+                else:
+                    # Nur eine Verwendung, kein Muster erkennbar: kein echter
+                    # Abstand ermittelbar, jaehrlicher Rhythmus als einzig
+                    # verfuegbare Annahme.
+                    avg_interval_days = 365.0
+
+                # Ein bereits (durch Verbuchen ueber den vorhandenen Bestand
+                # hinaus) negativer Bestand wuerde sonst eine negative
+                # "Reichweite" ergeben - fachlich ist das schlicht
+                # "aufgebraucht", nicht "seit X Monaten im Minus".
+                available = max(0.0, item.amount)
+                full_uses_covered = math.floor(available / avg_amount_per_use)
+                months_remaining = round(full_uses_covered * avg_interval_days / 30.44, 1)
 
             # Zielbestand: genug fuer so viele weitere typische Verwendungen,
             # wie im Ziel-Reichweite-Fenster (aufgerundet) vorkommen wuerden -
