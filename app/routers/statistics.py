@@ -5,7 +5,14 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models import Batch
-from app.statistics import LOW_STOCK_THRESHOLD_MONTHS, SEASONAL_MIN_YEARS, TARGET_COVERAGE_MONTHS, compute_statistics
+from app.statistics import (
+    LOW_STOCK_THRESHOLD_MONTHS,
+    MIN_USES_FOR_FORECAST,
+    SEASONAL_MIN_YEARS,
+    STALE_USE_CUTOFF_MONTHS,
+    TARGET_COVERAGE_MONTHS,
+    compute_statistics,
+)
 from app.templating import templates
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
@@ -70,5 +77,7 @@ def statistics_page(
             "target_coverage_months": TARGET_COVERAGE_MONTHS,
             "low_stock_threshold_months": LOW_STOCK_THRESHOLD_MONTHS,
             "seasonal_min_years": SEASONAL_MIN_YEARS,
+            "min_uses_for_forecast": MIN_USES_FOR_FORECAST,
+            "stale_use_cutoff_months": STALE_USE_CUTOFF_MONTHS,
         },
     )

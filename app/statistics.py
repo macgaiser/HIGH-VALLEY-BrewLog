@@ -85,6 +85,10 @@ class StockForecast:
     recommended_order: float
     low_stock: bool
     depleted: bool
+    # Ob es ueberhaupt schon mal eine Verwendung gab (fuer den Hinweistext,
+    # wenn months_remaining fehlt: "nie verwendet" vs. "zu alt/zu selten
+    # fuer eine verlaessliche Prognose" - siehe _stock_forecast).
+    has_usage_history: bool = False
 
 
 @dataclass
@@ -262,6 +266,15 @@ def _item_usage(batches: list[Batch], top_n: int = 10) -> dict[str, list[ItemUsa
 # Muster gilt (statt Zufall) - siehe _seasonal_months() unten.
 SEASONAL_MIN_YEARS = 2
 
+# Eine Zutat bekommt nur dann eine Reichweiten-/Bestellempfehlung, wenn sie
+# (a) mindestens so oft verwendet wurde und (b) die letzte Verwendung nicht
+# laenger als so viele Monate her ist - sonst wuerden auch laengst nicht
+# mehr gebraute oder nur einmalig getestete Zutaten eine (falsche)
+# Nachbestell-Dringlichkeit vortaeuschen, nur weil irgendwann mal Verbrauch
+# in der Historie stand.
+MIN_USES_FOR_FORECAST = 2
+STALE_USE_CUTOFF_MONTHS = 12
+
 
 def _next_occurrence(after: date, months: list[int]) -> date:
     """Naechster 15. eines der gegebenen Kalendermonate, ab (inklusive)
@@ -313,6 +326,12 @@ def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
       bewusst nur das letzte Jahr, nicht die gesamte Historie, da sich
       gebraute Bierstile ueber die Zeit veraendern und aeltere Abstaende dann
       wenig ueber die Zukunft aussagen.
+
+    Eine Prognose gibt es aber nur fuer Zutaten, die noch als "aktiv im
+    Einsatz" gelten (siehe MIN_USES_FOR_FORECAST/STALE_USE_CUTOFF_MONTHS) -
+    sonst wuerde jede irgendwann mal (und sei es nur ein einziges Mal vor
+    Jahren) verwendete Zutat eine Nachbestell-Empfehlung bekommen, obwohl
+    sie laengst nicht mehr gebraucht wird.
     """
     all_batches = session.exec(select(Batch)).all()
 
@@ -349,8 +368,20 @@ def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
 
         months_remaining: float | None = None
         recommended = 0.0
+        has_history = used_all > 0 and bool(dates_all)
 
-        if used_all > 0 and dates_all:
+        # Nur Zutaten mit genug Verwendungen UND einer nicht allzu alten
+        # letzten Verwendung bekommen eine Prognose - eine Zutat, die vor
+        # Jahren einmal ausprobiert oder seither nicht mehr gebraucht wurde,
+        # soll keine Nachbestell-Dringlichkeit vortaeuschen, nur weil
+        # irgendwann mal Verbrauch in der Historie stand.
+        is_relevant = (
+            has_history
+            and len(dates_all) >= MIN_USES_FOR_FORECAST
+            and (today - dates_all[-1]).days / 30.44 <= STALE_USE_CUTOFF_MONTHS
+        )
+
+        if is_relevant:
             avg_amount_per_use = used_all / len(dates_all)
             seasonal_months = _seasonal_months(dates_all)
 
@@ -408,6 +439,7 @@ def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
                 recommended_order=recommended,
                 low_stock=months_remaining is not None and months_remaining < LOW_STOCK_THRESHOLD_MONTHS,
                 depleted=item.amount <= 0,
+                has_usage_history=has_history,
             )
         )
 
