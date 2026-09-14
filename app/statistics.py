@@ -16,6 +16,7 @@ Reichweite überhaupt berechnen lässt.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
@@ -257,23 +258,42 @@ def _item_usage(batches: list[Batch], top_n: int = 10) -> dict[str, list[ItemUsa
 
 
 def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
+    """Reichweiten-Schaetzung je Lagerartikel.
+
+    Verbrauch passiert nicht gleichmaessig ueber die Zeit, sondern in
+    Schueben - jeweils die fuer einen Sud benoetigte Menge, mit teils sehr
+    unregelmaessigen Abstaenden dazwischen. Eine reine Division durch 12
+    Monate wuerde das verwischen: zwei Sude kurz hintereinander mit
+    zusammen 5kg saehen dann wie "2,5kg pro Monat, also entspannt" aus,
+    obwohl der eigentlich entscheidende Punkt ist, ob der Bestand fuer den
+    naechsten Sud in typischer Groessenordnung noch reicht. Die Reichweite
+    wird deshalb ueber die Anzahl weiterer "typischer Verwendungen" simuliert,
+    die der aktuelle Bestand noch hergibt, multipliziert mit dem
+    durchschnittlichen Abstand zwischen bisherigen Verwendungen - nicht als
+    stetiger Verbrauch, sondern als Abfolge diskreter, sud-grosser Entnahmen.
+    """
     window_start = today - timedelta(days=365)
     recent = _batches_in_range(session, window_start, today)
 
     usage: dict[int, float] = {}
+    use_dates: dict[int, list[date]] = {}
+
+    def _record(item_id: int | None, amount: float | None, brew_date: date | None) -> None:
+        if not item_id:
+            return
+        usage[item_id] = usage.get(item_id, 0.0) + (amount or 0)
+        if brew_date:
+            use_dates.setdefault(item_id, []).append(brew_date)
+
     for b in recent:
         for g in b.grain_additions:
-            if g.inventory_item_id:
-                usage[g.inventory_item_id] = usage.get(g.inventory_item_id, 0.0) + (g.amount_kg or 0)
+            _record(g.inventory_item_id, g.amount_kg, b.brew_date)
         for h in b.hop_additions:
-            if h.inventory_item_id:
-                usage[h.inventory_item_id] = usage.get(h.inventory_item_id, 0.0) + (h.amount_g or 0)
+            _record(h.inventory_item_id, h.amount_g, b.brew_date)
         for d in b.dry_hop_additions:
-            if d.inventory_item_id:
-                usage[d.inventory_item_id] = usage.get(d.inventory_item_id, 0.0) + (d.amount_g or 0)
+            _record(d.inventory_item_id, d.amount_g, b.brew_date)
         for y in b.yeast_additions:
-            if y.inventory_item_id:
-                usage[y.inventory_item_id] = usage.get(y.inventory_item_id, 0.0) + (y.amount or 0)
+            _record(y.inventory_item_id, y.amount, b.brew_date)
 
     items = session.exec(select(InventoryItem)).all()
     results: list[StockForecast] = []
@@ -282,16 +302,36 @@ def _stock_forecast(session: Session, today: date) -> list[StockForecast]:
         avg_monthly = round(used / 12, 3) if used > 0 else None
         months_remaining: float | None = None
         recommended = 0.0
-        # Ein bereits (durch Verbuchen ueber den vorhandenen Bestand hinaus)
-        # negativer Bestand wuerde sonst eine negative "Reichweite" ergeben -
-        # fachlich ist das schlicht "aufgebraucht", nicht "seit X Monaten im
-        # Minus". Fuer die Reichweite zaehlt daher nur der positive Anteil,
-        # die Bestellempfehlung selbst gleicht das Minus trotzdem mit aus.
-        if avg_monthly:
-            months_remaining = round(max(0.0, item.amount) / avg_monthly, 1)
-            target_stock = avg_monthly * TARGET_COVERAGE_MONTHS
+
+        dates = sorted(use_dates.get(item.id, []))
+        if used > 0 and dates:
+            avg_amount_per_use = used / len(dates)
+            if len(dates) >= 2:
+                span_days = (dates[-1] - dates[0]).days
+                avg_interval_days = span_days / (len(dates) - 1) if span_days > 0 else 365 / len(dates)
+            else:
+                # Nur eine Verwendung im 12-Monats-Fenster: kein echter
+                # Abstand ermittelbar, jaehrlicher Rhythmus als einzig
+                # verfuegbare Annahme.
+                avg_interval_days = 365.0
+
+            # Ein bereits (durch Verbuchen ueber den vorhandenen Bestand
+            # hinaus) negativer Bestand wuerde sonst eine negative
+            # "Reichweite" ergeben - fachlich ist das schlicht
+            # "aufgebraucht", nicht "seit X Monaten im Minus".
+            available = max(0.0, item.amount)
+            full_uses_covered = math.floor(available / avg_amount_per_use)
+            months_remaining = round(full_uses_covered * avg_interval_days / 30.44, 1)
+
+            # Zielbestand: genug fuer so viele weitere typische Verwendungen,
+            # wie im Ziel-Reichweite-Fenster (aufgerundet) vorkommen wuerden -
+            # keine stetige Zielmenge, sondern ein Vielfaches der typischen
+            # Sud-Menge, damit die Empfehlung tatsaechlich fuer ganze Sude reicht.
+            uses_for_target = math.ceil(TARGET_COVERAGE_MONTHS * 30.44 / avg_interval_days)
+            target_stock = uses_for_target * avg_amount_per_use
             if item.amount < target_stock:
                 recommended = round(target_stock - item.amount, 2)
+
         results.append(
             StockForecast(
                 item_id=item.id,
