@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}HighValley BrewLog{% endblock %}</title>
+  <title>{% block title %}HIGH VALLEY BrewLog{% endblock %}</title>
   <link rel="icon" type="image/png" href="/static/favicon-64.png">
   <link rel="icon" href="/static/favicon.ico" sizes="any">
   <link rel="stylesheet" href="/static/vendor/flatpickr/flatpickr.min.css">
@@ -287,6 +287,10 @@ m-1870 -266 c9 -11 11 -37 7 -91 -3 -41 -12 -158 -21 -260 -38 -482 -39 -1448
   <main class="container">
     {% block content %}{% endblock %}
   </main>
+  <footer class="app-footer">
+    <a href="{{ github_repo_url }}" target="_blank" rel="noopener">HIGH VALLEY BrewLog</a>
+    · {% if app_version_url %}<a href="{{ app_version_url }}" target="_blank" rel="noopener">{{ app_version_label }}</a>{% else %}{{ app_version }}{% endif %}
+  </footer>
   <script src="/static/vendor/flatpickr/flatpickr.min.js"></script>
   <script src="/static/vendor/flatpickr/de.js"></script>
   <script src="/static/app.js{{ static_version('app.js') }}"></script>

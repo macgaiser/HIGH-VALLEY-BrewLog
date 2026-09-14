@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ "Wasserprofil bearbeiten" if profile else "Neues Wasserprofil" }} – HighValley BrewLog{% endblock %}
+{% block title %}{{ "Wasserprofil bearbeiten" if profile else "Neues Wasserprofil" }} – HIGH VALLEY BrewLog{% endblock %}
 {% block content %}
 <h1>{{ "Wasserprofil bearbeiten" if profile else "Neues Wasserprofil" }}</h1>
 <form class="card" method="post" action="{{ '/settings/water-profiles/%d'|format(profile.id) if profile else '/settings/water-profiles/new' }}">

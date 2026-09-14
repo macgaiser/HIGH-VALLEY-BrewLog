@@ -1,13 +1,14 @@
 name: Docker-Image bauen und veröffentlichen
 
-# Baut bei jedem Push auf main (also nach jedem gemergten Pull Request) ein
-# neues Container-Image und lädt es zu GitHub Container Registry (ghcr.io)
-# hoch. Watchtower auf der NAS holt sich dieses neue Image dann automatisch
-# (siehe docker-compose.yml).
+# Baut bei jedem Push auf main (also nach jedem gemergten Pull Request) sowie
+# bei jedem Versions-Tag (z.B. "v1.0.0") ein neues Container-Image und lädt
+# es zu GitHub Container Registry (ghcr.io) hoch. Watchtower auf der NAS
+# holt sich dieses neue Image dann automatisch (siehe docker-compose.yml).
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 env:
@@ -24,6 +25,21 @@ jobs:
     steps:
       - name: Code auschecken
         uses: actions/checkout@v4
+        with:
+          # Ohne vollen Verlauf/Tags (Standard ist ein flacher Checkout ohne
+          # Tags) findet "git describe" unten kein Versions-Tag, selbst wenn
+          # der gebaute Commit eins traegt.
+          fetch-depth: 0
+
+      - name: Versionsangabe fuer die Fusszeile ermitteln
+        id: version
+        # Zeigt der gebaute Commit exakt auf ein "v*"-Tag (z.B. weil dieser
+        # Workflow-Lauf durch das Pushen von v1.0.0 ausgeloest wurde), wird
+        # dieses Tag als Version verwendet - sonst wie bisher die volle
+        # Commit-SHA (Fallback bei jedem normalen Merge nach main).
+        run: |
+          VERSION=$(git describe --tags --exact-match --match "v*" 2>/dev/null || echo "${{ github.sha }}")
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Bei GitHub Container Registry anmelden
         uses: docker/login-action@v3
@@ -37,6 +53,9 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            APP_VERSION_REF=${{ steps.version.outputs.value }}
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.value }}

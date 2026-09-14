@@ -1,4 +1,4 @@
-# HighValley BrewLog
+# HIGH VALLEY BrewLog
 
 Web-App für das Brauprotokoll (ehemals Excel), Lagerbestandsverwaltung
 (Malz/Hopfen/Hefe) und Rezeptkennzahlen. Läuft als Docker-Container, z.B.
@@ -200,7 +200,7 @@ Der Ablauf dahinter:
 
 **Einmalige Einrichtung, damit die NAS das Image ohne Zugangsdaten laden
 kann:** Nach dem ersten erfolgreichen GitHub-Actions-Lauf unter
-`github.com/macgaiser/HighValley-BrewLog` → Reiter **"Packages"** →
+`github.com/macgaiser/HIGH-VALLEY-BrewLog` → Reiter **"Packages"** →
 `highvalley-brewlog` öffnen → **Package settings** → **Change visibility**
 → **Public**. Das Image enthält nur den App-Code, keine Braudaten (die
 liegen ausschließlich in `./data` auf der NAS) - "public" ist hier also

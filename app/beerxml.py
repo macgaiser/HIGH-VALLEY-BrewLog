@@ -169,7 +169,7 @@ def build_recipe_xml(batch: Batch, settings: Settings, metrics: BatchMetrics) ->
         _sub(el, "STEP_TEMP", step.temperature_c or 0)
         _sub(el, "STEP_TIME", step.duration_min or 0)
 
-    _sub(recipe, "NOTES", f"Aus HighValley BrewLog: Sud #{batch.batch_number}")
+    _sub(recipe, "NOTES", f"Aus HIGH VALLEY BrewLog: Sud #{batch.batch_number}")
 
     rough = ET.tostring(recipes, encoding="unicode")
     pretty = minidom.parseString(rough).toprettyxml(indent="  ")

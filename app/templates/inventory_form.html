@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ "Artikel bearbeiten" if item else "Neuer Lagerartikel" }} – HighValley BrewLog{% endblock %}
+{% block title %}{{ "Artikel bearbeiten" if item else "Neuer Lagerartikel" }} – HIGH VALLEY BrewLog{% endblock %}
 {% block content %}
 <h1>{{ "Artikel bearbeiten" if item else "Neuer Lagerartikel" }}</h1>
 <form class="card" method="post" action="{{ '/inventory/%d/edit'|format(item.id) if item else '/inventory/new' }}">
