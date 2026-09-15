@@ -71,6 +71,41 @@
   {% endfor %}
 </div>
 {% endif %}
+
+{% if result.bitterness_map %}
+<section class="card">
+  <h2>Bitterkeit vs. Stammwürze <button type="button" class="info-btn" data-info-toggle="bitterness-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
+  <p class="hint info-popover" id="bitterness-hint" hidden>Ein Punkt je Sud im gewählten Zeitraum – Lage zeigt das Verhältnis von Körper (Stammwürze) zu Bittere (IBU), Punktfarbe die eigene Bierfarbe.</p>
+  <div class="chart-box chart-box-tall"><canvas id="chart-bitterness"></canvas></div>
+</section>
+{% endif %}
+{% endif %}
+
+{% if result.style_seasonality %}
+<section class="card">
+  <h2>Braurhythmus: Bierstil × Monat <button type="button" class="info-btn" data-info-toggle="seasonality-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
+  <p class="hint info-popover" id="seasonality-hint" hidden>Wie oft ein Bierstil in welchem Kalendermonat gebraut wurde – über die gesamte Sud-Historie, unabhängig vom oben gewählten Zeitraum, da sich ein wiederkehrendes saisonales Muster erst über mehrere Jahre zeigt. Je kräftiger eingefärbt, desto öfter kam diese Kombination vor.</p>
+  <div class="table-scroll">
+  <table class="table heatmap-table">
+    <thead>
+      <tr>
+        <th>Bierstil</th>
+        {% for m in month_names %}<th>{{ m }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in result.style_seasonality %}
+      <tr>
+        <td class="col-style">{{ row.style }}</td>
+        {% for cell in row.cells %}
+        <td class="heatmap-cell" style="background-color: rgba(106, 158, 52, {{ cell.intensity }});" title="{{ row.style }} – {{ month_names[loop.index0] }}: {{ cell.count }} Sud{{ 'e' if cell.count != 1 else '' }}">{{ cell.count if cell.count else "" }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
 {% endif %}
 
 <section class="card">
@@ -279,6 +314,44 @@
   });
   {% endif %}
   {% endfor %}
+
+  {% if result.bitterness_map %}
+  var bitternessLabels = {{ result.bitterness_map|map(attribute='label')|list|tojson }};
+  var bitternessOg = {{ result.bitterness_map|map(attribute='og_plato')|list|tojson }};
+  var bitternessIbu = {{ result.bitterness_map|map(attribute='ibu')|list|tojson }};
+  new Chart(document.getElementById("chart-bitterness"), {
+    type: "scatter",
+    data: {
+      datasets: [{
+        label: "Sude",
+        data: bitternessOg.map(function (og, i) { return { x: og, y: bitternessIbu[i] }; }),
+        backgroundColor: {{ result.bitterness_map|map(attribute='color_hex')|list|tojson }},
+        borderColor: "#8a7a63",
+        borderWidth: 1,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              return bitternessLabels[ctx.dataIndex] + ": " + ctx.parsed.x + " °P, " + ctx.parsed.y + " IBU";
+            },
+          },
+        },
+      },
+      scales: {
+        x: { title: { display: true, text: "Stammwürze (°P)" } },
+        y: { beginAtZero: true, title: { display: true, text: "IBU" } },
+      },
+    },
+  });
+  {% endif %}
 </script>
 {% endif %}
 {% endblock %}

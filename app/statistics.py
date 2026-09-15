@@ -1,5 +1,6 @@
-"""Statistik-Auswertungen: gebraute Menge, Zutatenverbrauch je Zeitraum und
-eine Reichweiten-Schätzung für den Lagerbestand.
+"""Statistik-Auswertungen: gebraute Menge, Zutatenverbrauch je Zeitraum,
+eine Reichweiten-Schätzung für den Lagerbestand, ein Bitterkeit-Stammwürze-
+Diagramm sowie eine Bierstil/Braumonat-Heatmap für saisonale Muster.
 
 Alles wird bei jedem Aufruf aus den vorhandenen Sud- und Lagerbestand-Daten
 neu berechnet (wie in batch_calc.py) - es gibt keine eigene Speicherung.
@@ -23,7 +24,8 @@ from datetime import date, timedelta
 from sqlmodel import Session, select
 
 from app import formulas
-from app.models import Batch, InventoryCategory, InventoryItem
+from app.batch_calc import compute_metrics
+from app.models import Batch, InventoryCategory, InventoryItem, Settings
 
 MONTH_NAMES_DE = [
     "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
@@ -84,6 +86,29 @@ class ItemUsage:
 
 
 @dataclass
+class BitternessPoint:
+    """Ein Sud im Bitterkeit-Stammwürze-Diagramm."""
+
+    label: str  # "#12 – Helles" fuers Tooltip
+    og_plato: float
+    ibu: float
+    color_hex: str
+
+
+@dataclass
+class StyleMonthCell:
+    count: int
+    intensity: float  # 0.0-1.0, count relativ zum Maximum der gesamten Matrix - fuer die Zellenfaerbung
+
+
+@dataclass
+class StyleSeasonalityRow:
+    style: str
+    total: int
+    cells: list[StyleMonthCell]  # 12 Eintraege, Index 0 = Januar
+
+
+@dataclass
 class StockForecast:
     item_id: int
     name: str
@@ -114,6 +139,8 @@ class StatisticsResult:
     fermentation_usage: list[VolumeShare] = field(default_factory=list)
     color_share: list[ColorShare] = field(default_factory=list)
     item_usage: dict[str, list[ItemUsage]] = field(default_factory=dict)
+    bitterness_map: list[BitternessPoint] = field(default_factory=list)
+    style_seasonality: list[StyleSeasonalityRow] = field(default_factory=list)
     stock_forecast: list[StockForecast] = field(default_factory=list)
 
 
@@ -269,6 +296,63 @@ def _item_usage(batches: list[Batch], top_n: int = 10) -> dict[str, list[ItemUsa
         if aggregated:
             result[key] = [ItemUsage(name=n, amount=round(a, 2), unit=unit, batch_count=c) for n, a, c in aggregated]
     return result
+
+
+def _bitterness_map(batches: list[Batch], settings: Settings) -> list[BitternessPoint]:
+    """Ein Punkt je Sud fuers Bitterkeit-Stammwürze-Diagramm: zeigt auf
+    einen Blick, wo die eigenen Sude im Spannungsfeld zwischen Koerper
+    (Stammwuerze) und Bittere (IBU) liegen - z.B. ob ein "Helles" tatsaechlich
+    deutlich schlanker/milder ausfaellt als die IPAs. Nutzt dieselbe
+    Kennzahlen-Berechnung wie die Sude-Uebersicht (compute_metrics), inkl.
+    Fallback auf von Hand eingetragene IBU-Werte fuer Sude ohne Hopfengaben-
+    Rohdaten. Ein Sud ohne beide Werte (noch nicht gebraut/kein Hopfen
+    erfasst) liefert keinen sinnvollen Punkt und wird ausgelassen."""
+    points: list[BitternessPoint] = []
+    for b in batches:
+        metrics = compute_metrics(b, settings)
+        if not metrics.og_plato or not metrics.ibu_total:
+            continue
+        label = f"#{b.batch_number}"
+        if b.style:
+            label += f" – {b.style.strip()}"
+        color_hex = metrics.color_hex or "#6b3417"
+        points.append(
+            BitternessPoint(label=label, og_plato=metrics.og_plato, ibu=metrics.ibu_total, color_hex=color_hex)
+        )
+    return points
+
+
+def _style_seasonality(session: Session) -> list[StyleSeasonalityRow]:
+    """Braurhythmus je Bierstil und Kalendermonat, ueber die GESAMTE
+    Sud-Historie (bewusst unabhaengig vom oben waehlbaren Zeitraum) - ein
+    wiederkehrendes saisonales Muster (z.B. "jedes Jahr im Winter ein
+    Bockbier") laesst sich nur erkennen, wenn mehrere Jahre gemeinsam
+    betrachtet werden, nicht nur der aktuell gewaehlte Ausschnitt."""
+    all_batches = session.exec(select(Batch)).all()
+
+    counts: dict[str, list[int]] = {}
+    for b in all_batches:
+        if not b.brew_date:
+            continue
+        style = (b.style or "").strip() or "Unbekannt"
+        counts.setdefault(style, [0] * 12)[b.brew_date.month - 1] += 1
+
+    if not counts:
+        return []
+    max_count = max(c for month_counts in counts.values() for c in month_counts)
+    if max_count == 0:
+        return []
+
+    rows = [
+        StyleSeasonalityRow(
+            style=style,
+            total=sum(month_counts),
+            cells=[StyleMonthCell(count=c, intensity=round(c / max_count, 2) if c else 0.0) for c in month_counts],
+        )
+        for style, month_counts in counts.items()
+    ]
+    rows.sort(key=lambda r: r.total, reverse=True)
+    return rows
 
 
 # Mindestanzahl unterschiedlicher Jahre, in denen eine Zutat im selben
@@ -465,6 +549,7 @@ def compute_statistics(session: Session, start: date, end: date, today: date | N
     batches = _batches_in_range(session, start, end)
     total_liters = round(sum(_brewed_volume(b) or 0 for b in batches), 1)
     brew_day_count, avg_days_between_brew_days = _brew_day_stats(batches)
+    settings = session.get(Settings, 1) or Settings()
 
     return StatisticsResult(
         start=start,
@@ -478,5 +563,7 @@ def compute_statistics(session: Session, start: date, end: date, today: date | N
         fermentation_usage=_volume_share(batches, lambda b: (b.fermentation_type or "").strip()),
         color_share=_color_share(batches),
         item_usage=_item_usage(batches),
+        bitterness_map=_bitterness_map(batches, settings),
+        style_seasonality=_style_seasonality(session),
         stock_forecast=_stock_forecast(session, today),
     )
