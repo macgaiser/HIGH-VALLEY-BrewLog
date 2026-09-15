@@ -9,6 +9,7 @@ from app.statistics import (
     CATEGORY_LABELS,
     LOW_STOCK_THRESHOLD_MONTHS,
     MIN_USES_FOR_FORECAST,
+    MONTH_NAMES_DE,
     SEASONAL_MIN_YEARS,
     STALE_USE_CUTOFF_MONTHS,
     TARGET_COVERAGE_MONTHS,
@@ -87,5 +88,6 @@ def statistics_page(
             "min_uses_for_forecast": MIN_USES_FOR_FORECAST,
             "stale_use_cutoff_months": STALE_USE_CUTOFF_MONTHS,
             "stock_categories": stock_categories,
+            "month_names": MONTH_NAMES_DE,
         },
     )
