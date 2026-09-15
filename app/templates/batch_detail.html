@@ -15,6 +15,18 @@
     </form>
   </div>
 </div>
+<div class="actions batch-pager">
+  {% if prev_batch %}
+  <a class="btn" href="/batches/{{ prev_batch.id }}" title="Sud #{{ prev_batch.batch_number }}">‹ Vorheriger Sud</a>
+  {% else %}
+  <span class="btn btn-disabled">‹ Vorheriger Sud</span>
+  {% endif %}
+  {% if next_batch %}
+  <a class="btn" href="/batches/{{ next_batch.id }}" title="Sud #{{ next_batch.batch_number }}">Nächster Sud ›</a>
+  {% else %}
+  <span class="btn btn-disabled">Nächster Sud ›</span>
+  {% endif %}
+</div>
 <p class="subtitle">{{ batch.style }} · {{ batch.fermentation_type }} · Brautag: {{ batch.brew_date|de_date if batch.brew_date else "kein Datum" }}{% if batch.bottling_date %} · Abfülldatum: {{ batch.bottling_date|de_date }}{% endif %}</p>
 {% if batch.inventory_deduction_locked %}
 <p class="badge-locked">🔒 Lagerbuchung gesperrt – dieser Sud verändert beim Speichern keinen Lagerbestand</p>

@@ -297,6 +297,7 @@ h1, h2, h3 {
 .subtitle { color: var(--muted); margin-top: 0.15rem; }
 
 .actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.batch-pager { margin: 1rem 0; }
 
 .label-theme-toggle {
   display: flex;
