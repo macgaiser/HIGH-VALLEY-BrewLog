@@ -74,8 +74,8 @@
 
 {% if result.bitterness_map %}
 <section class="card">
-  <h2>Bitterkeit vs. Stammwürze</h2>
-  <p class="hint">Ein Punkt je Sud im gewählten Zeitraum – Lage zeigt das Verhältnis von Körper (Stammwürze) zu Bittere (IBU), Punktfarbe die eigene Bierfarbe.</p>
+  <h2>Bitterkeit vs. Stammwürze <button type="button" class="info-btn" data-info-toggle="bitterness-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
+  <p class="hint info-popover" id="bitterness-hint" hidden>Ein Punkt je Sud im gewählten Zeitraum – Lage zeigt das Verhältnis von Körper (Stammwürze) zu Bittere (IBU), Punktfarbe die eigene Bierfarbe.</p>
   <div class="chart-box chart-box-tall"><canvas id="chart-bitterness"></canvas></div>
 </section>
 {% endif %}
