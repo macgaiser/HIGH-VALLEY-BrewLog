@@ -4,15 +4,30 @@
 <div class="page-header">
   <h1>Sud #{{ batch.batch_number }} – {{ batch.name }}</h1>
   <div class="actions">
-    <a class="btn" href="/batches/{{ batch.id }}/edit">Bearbeiten</a>
-    <a class="btn" href="/batches/{{ batch.id }}/label">Etikett drucken</a>
-    <a class="btn" href="/batches/{{ batch.id }}/export/beerxml">Als BeerXML exportieren</a>
-    <form method="post" action="/batches/{{ batch.id }}/copy">
-      <button class="btn" type="submit">Sud kopieren</button>
-    </form>
-    <form method="post" action="/batches/{{ batch.id }}/delete" onsubmit="return confirm('Sud #{{ batch.batch_number }} wirklich löschen? Lagerbuchungen werden zurückgebucht.')">
-      <button class="btn btn-danger" type="submit">Löschen</button>
-    </form>
+    {% if prev_batch %}
+    <a class="btn btn-icon batch-pager-arrow" href="/batches/{{ prev_batch.id }}" title="Sud #{{ prev_batch.batch_number }} – {{ prev_batch.name }}" aria-label="Vorheriger Sud">‹</a>
+    {% else %}
+    <span class="btn btn-icon batch-pager-arrow btn-disabled" aria-hidden="true">‹</span>
+    {% endif %}
+    {% if next_batch %}
+    <a class="btn btn-icon batch-pager-arrow" href="/batches/{{ next_batch.id }}" title="Sud #{{ next_batch.batch_number }} – {{ next_batch.name }}" aria-label="Nächster Sud">›</a>
+    {% else %}
+    <span class="btn btn-icon batch-pager-arrow btn-disabled" aria-hidden="true">›</span>
+    {% endif %}
+    <a class="btn btn-primary" href="/batches/{{ batch.id }}/edit">Bearbeiten</a>
+    <details class="menu">
+      <summary>Mehr</summary>
+      <div class="menu-panel">
+        <a href="/batches/{{ batch.id }}/label">Etikett drucken</a>
+        <a href="/batches/{{ batch.id }}/export/beerxml">Als BeerXML exportieren</a>
+        <form method="post" action="/batches/{{ batch.id }}/copy">
+          <button type="submit">Sud kopieren</button>
+        </form>
+        <form method="post" action="/batches/{{ batch.id }}/delete" onsubmit="return confirm('Sud #{{ batch.batch_number }} wirklich löschen? Lagerbuchungen werden zurückgebucht.')">
+          <button type="submit" class="menu-danger">Löschen</button>
+        </form>
+      </div>
+    </details>
   </div>
 </div>
 <p class="subtitle">{{ batch.style }} · {{ batch.fermentation_type }} · Brautag: {{ batch.brew_date|de_date if batch.brew_date else "kein Datum" }}{% if batch.bottling_date %} · Abfülldatum: {{ batch.bottling_date|de_date }}{% endif %}</p>
