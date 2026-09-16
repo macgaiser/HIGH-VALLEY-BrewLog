@@ -297,7 +297,58 @@ h1, h2, h3 {
 .subtitle { color: var(--muted); margin-top: 0.15rem; }
 
 .actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-.batch-pager { margin: 1rem 0; }
+
+/* "Mehr"-Menü (z.B. Sud-Ansicht): fasst selten gebrauchte Aktionen
+   (Etikett drucken, BeerXML-Export, Kopieren, Löschen) zusammen, damit die
+   Kopfzeile nicht mit vielen gleichwertig aussehenden Buttons ueberladen
+   wirkt - dasselbe <details>/<summary>-Dropdown-Muster wie der
+   Zutatenfilter der Sude-Liste (.ingredient-filter), nur rechts statt
+   links verankert, da der Aufklapp-Button rechts im Header sitzt. */
+.menu { position: relative; }
+.menu summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: white;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.menu summary::-webkit-details-marker { display: none; }
+.menu summary::after { content: " ▾"; }
+.menu[open] summary::after { content: " ▴"; }
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 0.4rem;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+}
+.menu-panel a, .menu-panel button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.menu-panel a:hover, .menu-panel button:hover { background: var(--bg); }
+.menu-panel form { margin: 0; }
+.menu-panel .menu-danger { color: var(--danger); }
 
 .label-theme-toggle {
   display: flex;
@@ -387,6 +438,7 @@ h1, h2, h3 {
 .col-actions { text-align: center; }
 .btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.1rem; height: 2.1rem; padding: 0; }
 .btn-icon svg { width: 1.1rem; height: 1.1rem; }
+.batch-pager-arrow { font-size: 1.3rem; line-height: 1; }
 
 .compare-select-cell { text-align: center; cursor: pointer; }
 .compare-select-cell input[type="checkbox"] { width: auto; cursor: pointer; }
