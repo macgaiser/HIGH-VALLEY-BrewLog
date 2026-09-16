@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Neue Lagerartikel aus Import – HIGH VALLEY BrewLog{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Neue Lagerartikel aus Import</h1>
+</div>
+<p class="hint">Der Import ist bereits abgeschlossen (Lagerbuchung ist für den/die importierten Sud/Sude gesperrt, der Bestand bleibt also unangetastet). Folgende Zutaten aus dem Rezept sind noch nicht im Lagerbestand. Für ausgewählte Zutaten wird ein neuer Lagerartikel mit Bestand 0 angelegt und automatisch mit den passenden Zutatenzeilen verknüpft – Menge kannst du danach unter Lagerbestand zubuchen. Nicht ausgewählte Zutaten bleiben wie bisher reiner Freitext, ohne Lagerverknüpfung.</p>
+
+<form method="post" action="/batches/import-beerxml/apply-new-items">
+  {% for batch_id in batch_ids %}
+  <input type="hidden" name="batch_id" value="{{ batch_id }}">
+  {% endfor %}
+  <input type="hidden" name="return_url" value="{{ return_url }}">
+
+  <section class="card">
+    <div class="table-scroll">
+    <table class="form-table">
+      <thead>
+        <tr><th></th><th>Kategorie</th><th>Name</th><th>Alphasäure (%)</th><th>Einheit</th></tr>
+      </thead>
+      <tbody>
+        {% for s in suggestions %}
+        <tr>
+          <td>
+            <input type="hidden" name="accept_flag" value="false">
+            <input type="checkbox" name="accept_flag" value="true" checked>
+          </td>
+          <td>
+            <input type="hidden" name="category" value="{{ s.category.value }}">
+            {{ s.category.value|capitalize }}
+          </td>
+          <td><input type="text" name="name" value="{{ s.name }}"></td>
+          <td>
+            {% if s.category.value == "hopfen" %}
+            <input type="number" step="0.1" name="spec" value="{{ s.spec }}">
+            {% else %}
+            <input type="hidden" name="spec" value="">
+            {% endif %}
+          </td>
+          <td>
+            {% if s.category.value == "hefe" %}
+            <input type="text" name="unit" value="{{ s.unit }}" style="max-width:80px">
+            {% else %}
+            <input type="hidden" name="unit" value="{{ s.unit }}">
+            {{ s.unit }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Ausgewählte anlegen</button>
+    <a class="btn" href="{{ return_url }}">Überspringen</a>
+  </div>
+</form>
+{% endblock %}

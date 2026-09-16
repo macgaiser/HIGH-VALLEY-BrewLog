@@ -7,9 +7,10 @@ from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
-from app.beerxml import BeerXmlParseError, create_batch_from_recipe, parse_recipes_xml
+from app.beerxml import BeerXmlParseError, UnmatchedIngredient, create_batch_from_recipe, parse_recipes_xml
 from app.database import BACKGROUND_IMAGE_DIR, BORDER_GRAPHIC_DIR, LOGO_DIR, get_session
 from app.models import Batch, BackgroundImage, BeerStyle, BorderGraphic, DefaultBrewDayTask, Logo, Settings, WaterProfile
+from app.routers.batches import _new_items_response
 from app.templating import templates
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -99,12 +100,15 @@ async def settings_beer_styles_save(request: Request, session: Session = Depends
 
 
 @router.post("/import-beerxml")
-async def settings_import_beerxml(session: Session = Depends(get_session), file: UploadFile = File(...)):
+async def settings_import_beerxml(request: Request, session: Session = Depends(get_session), file: UploadFile = File(...)):
     """Bulk-Import der bisherigen Rezept-Bibliothek (Umstieg von anderer
     Brausoftware): eine BeerXML-Datei kann mehrere <RECIPE>-Eintraege
     enthalten, jeder wird als eigener neuer Sud angelegt (fortlaufende
     Sud-Nummer). Fuer den spontanen Einzelimport beim Neuanlegen siehe
-    /batches/import-beerxml."""
+    /batches/import-beerxml. Zutaten ohne Lagerartikel-Treffer werden ueber
+    alle importierten Rezepte hinweg gesammelt (nach Name+Kategorie
+    dedupliziert) und - falls vorhanden - auf derselben "Neue Lagerartikel"-
+    Zwischenseite wie beim Einzelimport vorgeschlagen."""
     data = await file.read()
     try:
         recipes = parse_recipes_xml(data)
@@ -112,12 +116,20 @@ async def settings_import_beerxml(session: Session = Depends(get_session), file:
         return RedirectResponse(f"/settings?error={quote(str(exc))}", status_code=303)
 
     next_number = (session.exec(select(Batch.batch_number).order_by(Batch.batch_number.desc())).first() or 0) + 1
+    batch_ids: list[int] = []
+    unmatched_by_key: dict[tuple[str, str], UnmatchedIngredient] = {}
     for recipe in recipes:
-        create_batch_from_recipe(session, recipe, next_number)
+        batch, unmatched = create_batch_from_recipe(session, recipe, next_number)
+        batch_ids.append(batch.id)
+        for u in unmatched:
+            unmatched_by_key.setdefault((u.category.value, u.name.lower()), u)
         next_number += 1
 
     msg = f"{len(recipes)} Rezept{'e' if len(recipes) != 1 else ''} importiert."
-    return RedirectResponse(f"/batches?success={quote(msg)}", status_code=303)
+    return_url = f"/batches?success={quote(msg)}"
+    if unmatched_by_key:
+        return _new_items_response(request, batch_ids, list(unmatched_by_key.values()), return_url)
+    return RedirectResponse(return_url, status_code=303)
 
 
 @router.post("/logos")
