@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from xml.dom import minidom
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.batch_calc import BatchMetrics
 from app.formulas import sg_to_plato
@@ -28,6 +28,7 @@ from app.models import (
     HopAddition,
     HopAdditionType,
     InventoryCategory,
+    InventoryItem,
     MashStep,
     Settings,
     YeastAddition,
@@ -392,13 +393,49 @@ def parse_recipes_xml(xml_bytes: bytes) -> list[ParsedRecipe]:
     return parsed
 
 
-def create_batch_from_recipe(session: Session, recipe: ParsedRecipe, batch_number: int) -> Batch:
+@dataclass
+class UnmatchedIngredient:
+    """Eine Rezept-Zutat, die sich beim Import keinem bestehenden
+    Lagerartikel zuordnen liess - Grundlage fuer den "Neue Lagerartikel"-
+    Vorschlag, den die aufrufende Route dem Nutzer nach dem Import zeigt."""
+
+    category: InventoryCategory
+    name: str
+    unit: str
+    spec: str = ""  # z.B. Alphasäure als Vorschlagswert bei Hopfen
+
+
+def find_inventory_item(session: Session, category: InventoryCategory, name: str) -> InventoryItem | None:
+    """Exakter Namensabgleich (ohne Gross-/Kleinschreibung) innerhalb einer
+    Kategorie - bewusst kein unscharfer/Teilstring-Abgleich, da eine falsche
+    automatische Verknüpfung (z.B. "Citra" auf "Citra Cryo") den
+    Lagerbestand der falschen Zutat abbuchen würde."""
+    name_norm = name.strip().lower()
+    if not name_norm:
+        return None
+    for item in session.exec(select(InventoryItem).where(InventoryItem.category == category)).all():
+        if item.name.strip().lower() == name_norm:
+            return item
+    return None
+
+
+def create_batch_from_recipe(
+    session: Session, recipe: ParsedRecipe, batch_number: int
+) -> tuple[Batch, list[UnmatchedIngredient]]:
     """Legt aus einem per BeerXML importierten Rezept einen neuen Sud an.
     Nur Rezeptdaten sind danach gesetzt (siehe parse_recipes_xml) - Brautag,
     Messwerte und Kommentare bleiben leer und werden wie bei jedem anderen
-    Sud auf der Bearbeiten-/Detailseite nachgetragen. Zutaten werden nicht
-    mit Lagerartikeln verknüpft (keine verlässliche Namenszuordnung beim
-    Import), lösen also auch keine Lagerbuchung aus."""
+    Sud auf der Bearbeiten-/Detailseite nachgetragen.
+
+    Zutaten werden automatisch mit bestehenden Lagerartikeln verknüpft
+    (exakter Namensabgleich je Kategorie, siehe find_inventory_item) -
+    Zutaten ohne Treffer bleiben unverknüpft (reiner Freitext, wie bisher)
+    und werden als UnmatchedIngredient zurückgegeben, damit die aufrufende
+    Route dem Nutzer Vorschläge für neue Lagerartikel machen kann. Ein
+    Import ist nie ein tatsächlich gebrautes/verbrauchtes Rezept, darum wird
+    die Lagerbuchung für den neuen Sud immer gesperrt (inventory_deduction_
+    locked) - auch für verknüpfte Zutaten entsteht dadurch keine
+    automatische Abbuchung, der Lagerbestand bleibt unangetastet."""
     batch = Batch(
         batch_number=batch_number,
         name=recipe.name,
@@ -408,18 +445,39 @@ def create_batch_from_recipe(session: Session, recipe: ParsedRecipe, batch_numbe
         color_ebc=recipe.color_ebc,
         boil_time_min=recipe.boil_time_min,
         target_og_plato=recipe.target_og_plato,
+        inventory_deduction_locked=True,
     )
     session.add(batch)
     session.commit()
     session.refresh(batch)
 
+    unmatched: dict[tuple[InventoryCategory, str], UnmatchedIngredient] = {}
+
+    def _link(category: InventoryCategory, name: str, unit: str, spec: str = "") -> int | None:
+        item = find_inventory_item(session, category, name)
+        if item:
+            return item.id
+        key = (category, name.strip().lower())
+        if key not in unmatched:
+            unmatched[key] = UnmatchedIngredient(category=category, name=name.strip(), unit=unit, spec=spec)
+        return None
+
     for i, g in enumerate(recipe.grains):
-        session.add(GrainAddition(batch_id=batch.id, position=i, malt_name=g.name, amount_kg=g.amount_kg))
+        session.add(
+            GrainAddition(
+                batch_id=batch.id,
+                position=i,
+                malt_name=g.name,
+                amount_kg=g.amount_kg,
+                inventory_item_id=_link(InventoryCategory.malz, g.name, "kg"),
+            )
+        )
     for i, s in enumerate(recipe.mash_steps):
         session.add(
             MashStep(batch_id=batch.id, position=i, name=s.name, temperature_c=s.temperature_c, duration_min=s.duration_min)
         )
     for i, h in enumerate(recipe.hops):
+        alpha = f"{h.alpha_acid_percent:g}" if h.alpha_acid_percent else ""
         session.add(
             HopAddition(
                 batch_id=batch.id,
@@ -429,13 +487,31 @@ def create_batch_from_recipe(session: Session, recipe: ParsedRecipe, batch_numbe
                 amount_g=h.amount_g,
                 time_min=h.time_min,
                 addition_type=h.addition_type,
+                inventory_item_id=_link(InventoryCategory.hopfen, h.name, "g", alpha),
             )
         )
     for i, dh in enumerate(recipe.dry_hops):
-        session.add(DryHopAddition(batch_id=batch.id, position=i, hop_name=dh.name, amount_g=dh.amount_g))
+        session.add(
+            DryHopAddition(
+                batch_id=batch.id,
+                position=i,
+                hop_name=dh.name,
+                amount_g=dh.amount_g,
+                inventory_item_id=_link(InventoryCategory.hopfen, dh.name, "g"),
+            )
+        )
     for i, y in enumerate(recipe.yeasts):
-        session.add(YeastAddition(batch_id=batch.id, position=i, yeast_name=y.name, amount=y.amount, unit=y.unit))
+        session.add(
+            YeastAddition(
+                batch_id=batch.id,
+                position=i,
+                yeast_name=y.name,
+                amount=y.amount,
+                unit=y.unit,
+                inventory_item_id=_link(InventoryCategory.hefe, y.name, y.unit),
+            )
+        )
 
     session.commit()
     session.refresh(batch)
-    return batch
+    return batch, list(unmatched.values())

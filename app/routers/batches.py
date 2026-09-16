@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse, Response
 from sqlmodel import Session, select
 
 from app.batch_calc import compute_metrics, resolve_color_hex
-from app.beerxml import BeerXmlParseError, build_recipe_xml, create_batch_from_recipe, parse_recipes_xml
+from app.beerxml import BeerXmlParseError, build_recipe_xml, create_batch_from_recipe, find_inventory_item, parse_recipes_xml
 from app.database import get_session
 from app.inventory import sync_batch_deductions
 from app.models import (
@@ -260,11 +260,15 @@ def batch_new_form(request: Request, session: Session = Depends(get_session)):
 
 
 @router.post("/import-beerxml")
-async def batch_import_beerxml(session: Session = Depends(get_session), file: UploadFile = File(...)):
+async def batch_import_beerxml(request: Request, session: Session = Depends(get_session), file: UploadFile = File(...)):
     """Spontaner Einzel-Import beim Neuanlegen eines Suds: importiert nur das
     ERSTE Rezept aus der Datei und leitet direkt auf dessen Bearbeiten-Seite
     weiter, wo Brautag/Messwerte ergänzt werden können. Für den Bulk-Import
-    einer ganzen Rezept-Bibliothek auf einmal siehe /settings/import-beerxml."""
+    einer ganzen Rezept-Bibliothek auf einmal siehe /settings/import-beerxml.
+    Gibt es Zutaten ohne Lagerartikel-Treffer, wird statt direkt weiterzuleiten
+    erst die "Neue Lagerartikel"-Zwischenseite gezeigt (siehe
+    _new_items_response unten) - der Sud selbst ist zu diesem Zeitpunkt
+    bereits angelegt (mit gesperrter Lagerbuchung)."""
     data = await file.read()
     try:
         recipes = parse_recipes_xml(data)
@@ -272,9 +276,92 @@ async def batch_import_beerxml(session: Session = Depends(get_session), file: Up
         return RedirectResponse(f"/batches/new?error={quote(str(exc))}", status_code=303)
 
     next_number = (session.exec(select(Batch.batch_number).order_by(Batch.batch_number.desc())).first() or 0) + 1
-    batch = create_batch_from_recipe(session, recipes[0], next_number)
+    batch, unmatched = create_batch_from_recipe(session, recipes[0], next_number)
     msg = "Rezept importiert – bitte Brautag und Messwerte ergänzen."
-    return RedirectResponse(f"/batches/{batch.id}/edit?success={quote(msg)}", status_code=303)
+    return_url = f"/batches/{batch.id}/edit?success={quote(msg)}"
+    if unmatched:
+        return _new_items_response(request, [batch.id], unmatched, return_url)
+    return RedirectResponse(return_url, status_code=303)
+
+
+def _new_items_response(request: Request, batch_ids: list[int], unmatched, return_url: str):
+    """Rendert die "Neue Lagerartikel aus Import"-Zwischenseite, gemeinsam
+    genutzt vom spontanen Einzel-Import hier und vom Bulk-Import unter
+    /settings/import-beerxml."""
+    return templates.TemplateResponse(
+        "beerxml_new_items.html",
+        {
+            "request": request,
+            "batch_ids": batch_ids,
+            "suggestions": unmatched,
+            "return_url": return_url,
+        },
+    )
+
+
+@router.post("/import-beerxml/apply-new-items")
+async def batch_import_apply_new_items(request: Request, session: Session = Depends(get_session)):
+    """Verarbeitet die Auswahl von der "Neue Lagerartikel"-Zwischenseite:
+    legt fuer jede ausgewaehlte Zutat einen neuen Lagerartikel an (Bestand 0)
+    und verknuepft ihn nachtraeglich mit allen Zutatenzeilen gleichen Namens
+    (innerhalb der passenden Kategorie) in den zuvor importierten Suden."""
+    form = await request.form()
+    batch_ids = [int(v) for v in form.getlist("batch_id")]
+    return_url = form.get("return_url") or "/batches"
+
+    categories = form.getlist("category")
+    names = form.getlist("name")
+    units = form.getlist("unit")
+    specs = form.getlist("spec")
+    accepted = _parse_row_checkboxes(form.getlist("accept_flag"))
+
+    for category_value, name, unit, spec, accept in zip(categories, names, units, specs, accepted):
+        name = name.strip()
+        if not accept or not name:
+            continue
+        category = InventoryCategory(category_value)
+        # Schutz gegen ein versehentliches Doppel-Absenden (z.B. Zurueck-
+        # Button): existiert bereits ein Lagerartikel mit diesem Namen in
+        # der Kategorie, wird darauf verlinkt statt ein Duplikat anzulegen.
+        item = find_inventory_item(session, category, name)
+        if not item:
+            item = InventoryItem(
+                category=category,
+                name=name,
+                spec=spec.strip() if category == InventoryCategory.hopfen else "",
+                unit=unit.strip() or ("kg" if category == InventoryCategory.malz else "g"),
+                amount=0,
+            )
+            session.add(item)
+            session.commit()
+            session.refresh(item)
+
+        name_norm = name.lower()
+        if category == InventoryCategory.malz:
+            for b_id in batch_ids:
+                for g in session.exec(select(GrainAddition).where(GrainAddition.batch_id == b_id)).all():
+                    if (g.malt_name or "").strip().lower() == name_norm:
+                        g.inventory_item_id = item.id
+                        session.add(g)
+        elif category == InventoryCategory.hopfen:
+            for b_id in batch_ids:
+                for h in session.exec(select(HopAddition).where(HopAddition.batch_id == b_id)).all():
+                    if (h.hop_name or "").strip().lower() == name_norm:
+                        h.inventory_item_id = item.id
+                        session.add(h)
+                for dh in session.exec(select(DryHopAddition).where(DryHopAddition.batch_id == b_id)).all():
+                    if (dh.hop_name or "").strip().lower() == name_norm:
+                        dh.inventory_item_id = item.id
+                        session.add(dh)
+        elif category == InventoryCategory.hefe:
+            for b_id in batch_ids:
+                for y in session.exec(select(YeastAddition).where(YeastAddition.batch_id == b_id)).all():
+                    if (y.yeast_name or "").strip().lower() == name_norm:
+                        y.inventory_item_id = item.id
+                        session.add(y)
+        session.commit()
+
+    return RedirectResponse(return_url, status_code=303)
 
 
 async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
