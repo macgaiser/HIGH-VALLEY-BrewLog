@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from sqlmodel import Session, select
 
-from app.batch_calc import apply_frozen_cost, compute_metrics, resolve_color_hex
+from app.batch_calc import AUTO_LOCK_AGE_DAYS, apply_frozen_cost, auto_lock_cost, compute_metrics, resolve_color_hex
 from app.beerxml import BeerXmlParseError, build_recipe_xml, create_batch_from_recipe, find_inventory_item, parse_recipes_xml
 from app.database import get_session
 from app.inventory import sync_batch_deductions
@@ -38,8 +38,11 @@ router = APIRouter(prefix="/batches", tags=["batches"])
 # Ab diesem Alter des Brautags wird "Lagerbuchung sperren" im Bearbeiten-
 # Formular vorausgewaehlt (aendert nichts an bereits gespeicherten Suden,
 # nur ein Vorschlag beim naechsten Oeffnen - wird erst mit dem Speichern
-# wirksam und laesst sich vorher jederzeit wieder abwaehlen).
-INVENTORY_LOCK_SUGGESTION_AGE_DAYS = 90
+# wirksam und laesst sich vorher jederzeit wieder abwaehlen). Derselbe
+# Schwellwert wie AUTO_LOCK_AGE_DAYS (batch_calc.py) fuer "Kosten
+# einfrieren" - dort greift die Sperre aber automatisch, ohne manuelles
+# Speichern (siehe batch_detail unten).
+INVENTORY_LOCK_SUGGESTION_AGE_DAYS = AUTO_LOCK_AGE_DAYS
 
 MASH_STEP_NAMES = [
     "Einmaischen",
@@ -591,6 +594,9 @@ async def batch_create(request: Request, session: Session = Depends(get_session)
 def batch_detail(batch_id: int, request: Request, session: Session = Depends(get_session)):
     batch = session.get(Batch, batch_id)
     settings = session.get(Settings, 1)
+    if batch and auto_lock_cost(batch, settings, date.today()):
+        session.add(batch)
+        session.commit()
     metrics = compute_metrics(batch, settings)
     apply_frozen_cost(batch, metrics)
     prev_batch = None
@@ -776,6 +782,7 @@ def batch_edit_form(batch_id: int, request: Request, session: Session = Depends(
             "beer_styles": beer_styles,
             "water_profiles": water_profiles,
             "suggest_inventory_lock": suggest_inventory_lock,
+            "auto_lock_age_days": AUTO_LOCK_AGE_DAYS,
         },
     )
 

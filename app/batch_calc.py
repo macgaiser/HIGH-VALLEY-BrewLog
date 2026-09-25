@@ -21,7 +21,11 @@ Ist ein Sud über Batch.cost_locked "eingefroren", zeigt die Sud-Ansicht
 statt der live berechneten Kosten den beim letzten Speichern erstellten
 Schnappschuss (siehe apply_frozen_cost) - Preisänderungen im Lager oder
 den Einstellungen wirken sich dann nicht mehr rückwirkend auf diesen Sud
-aus.
+aus. Ab einem Alter von AUTO_LOCK_AGE_DAYS geschieht das automatisch
+(siehe auto_lock_cost) - anders als bei inventory_deduction_locked (dort
+nur eine Vorauswahl im Formular, siehe suggest_inventory_lock in
+routers/batches.py) reicht hier ein einfacher Eingriff in einen
+abgeleiteten Anzeigewert, kein Risiko fuer echte Bestandsdaten.
 """
 
 from __future__ import annotations
@@ -31,6 +35,12 @@ from datetime import date
 
 from app import formulas
 from app.models import Batch, InventoryCategory, Settings
+
+# Ab diesem Alter des Brautags (in Tagen) wird "Kosten einfrieren"
+# automatisch aktiv gesetzt (siehe auto_lock_cost) - derselbe Schwellwert,
+# den routers/batches.py fuer die (rein manuelle) Vorauswahl von
+# "Lagerbuchung sperren" verwendet (suggest_inventory_lock).
+AUTO_LOCK_AGE_DAYS = 90
 
 
 @dataclass
@@ -236,3 +246,30 @@ def apply_frozen_cost(batch: Batch, m: BatchMetrics) -> None:
     if batch.target_volume_l:
         m.cost_per_liter = round(m.total_cost / batch.target_volume_l, 2)
         m.cost_per_0_5l = round(m.cost_per_liter / 2, 2)
+
+
+def auto_lock_cost(batch: Batch, settings: Settings, today: date) -> bool:
+    """Sperrt die Kostenrechnung automatisch (siehe Batch.cost_locked),
+    sobald der Brautag mehr als AUTO_LOCK_AGE_DAYS zurückliegt - anders als
+    bei inventory_deduction_locked (dort nur eine Vorauswahl im Formular,
+    siehe suggest_inventory_lock in routers/batches.py, wirksam erst nach
+    manuellem Speichern) wird hier direkt gesperrt und sofort ein
+    Schnappschuss mit den aktuell gültigen Preisen erstellt - kein
+    manuelles Bestätigen nötig. Ein Sud ohne Brautag lässt sich mangels
+    Alter nicht automatisch sperren (genau wie bei suggest_inventory_lock).
+
+    Gibt True zurück, wenn dabei etwas geändert wurde (der Aufrufer muss
+    dann noch committen) - dieselbe Funktion wird sowohl beim Anzeigen
+    eines einzelnen Suds (routers/batches.py: batch_detail) als auch für
+    einen Sammel-Durchlauf über alle Sude beim App-Start verwendet (siehe
+    database._auto_lock_old_costs), damit auch bereits bestehende alte
+    Sude ohne manuelles Zutun erfasst werden."""
+    if batch.cost_locked or not batch.brew_date:
+        return False
+    if (today - batch.brew_date).days < AUTO_LOCK_AGE_DAYS:
+        return False
+    batch.cost_locked = True
+    snapshot = compute_metrics(batch, settings)
+    batch.frozen_total_cost = snapshot.total_cost
+    batch.frozen_cost_is_incomplete = snapshot.cost_is_incomplete
+    return True
