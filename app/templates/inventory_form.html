@@ -32,6 +32,12 @@
     <input type="text" name="unit" id="inv-unit-input" value="{{ item.unit if item else 'kg' }}" oninput="updateInventoryFields()">
   </div>
 
+  <div id="inv-field-price">
+    <label>Eigener Preis <span id="inv-price-unit"></span> <button type="button" class="info-btn" data-info-toggle="price-item-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></label>
+    <input type="number" step="0.01" name="price" value="{{ item.price if item and item.price is not none else '' }}" placeholder="leer = Standardpreis verwenden">
+    <p class="hint info-popover" id="price-item-hint" hidden>Nur nötig, wenn dieser Artikel vom allgemeinen Durchschnittspreis (Einstellungen) abweicht. Leer gelassen wird bei Malz/Hopfen der dortige Durchschnittspreis verwendet. Bei Sonstigem gibt es keinen Durchschnittspreis - ein Artikel ohne eigenen Preis fließt dann mit 0 € in die Kostenrechnung eines Suds ein.</p>
+  </div>
+
   {% if not item %}
   <label>Anfangsbestand</label>
   <div class="inline-form">
@@ -49,11 +55,16 @@
 {% block scripts %}
 <script>
   var FIXED_UNITS = {malz: 'kg', hopfen: 'g', sonstiges: 'g'};
+  var PRICE_UNIT_LABELS = {malz: '(€ / kg)', hopfen: '(€ / 100 g)', sonstiges: '(€ / 100 g)'};
   function updateInventoryFields() {
     var category = document.getElementById('inv-category').value;
     document.getElementById('inv-field-spec').hidden = (category !== 'hopfen');
     document.getElementById('inv-field-color-ebc').hidden = (category !== 'malz');
     document.getElementById('inv-field-unit').hidden = (category === 'malz' || category === 'hopfen' || category === 'sonstiges');
+    // Hefe hat Pauschalkosten je Sud statt eines Mengenpreises - ein
+    // eigener Preis am Artikel würde dort aktuell nichts bewirken.
+    document.getElementById('inv-field-price').hidden = (category === 'hefe');
+    document.getElementById('inv-price-unit').textContent = PRICE_UNIT_LABELS[category] || '';
     var amountUnit = document.getElementById('inv-amount-unit');
     if (amountUnit) {
       amountUnit.textContent = FIXED_UNITS[category] || document.getElementById('inv-unit-input').value || '';

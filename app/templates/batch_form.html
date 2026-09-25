@@ -84,6 +84,11 @@
     {% if suggest_inventory_lock %}
     <p class="hint">Automatisch vorausgewählt, da der Brautag mehr als 3 Monate zurückliegt (wirksam erst beim Speichern – bei Bedarf vorher wieder abwählbar).</p>
     {% endif %}
+    <label class="field-checkbox">
+      <input type="checkbox" name="cost_locked" {% if batch and batch.cost_locked %}checked{% endif %}>
+      Kosten einfrieren <button type="button" class="info-btn" data-info-toggle="cost-locked-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button>
+    </label>
+    <p class="hint info-popover" id="cost-locked-hint" hidden>Speichert die aktuell berechneten Kosten dieses Suds fest ab - spätere Preisänderungen im Lager oder in den Einstellungen wirken sich dann nicht mehr rückwirkend auf diesen Sud aus. Unabhängig von "Lagerbuchung sperren" oben, da beides unterschiedliche Dinge betrifft. Solange der Haken gesetzt bleibt, wird der Schnappschuss bei jedem weiteren Speichern neu erstellt - eigene Korrekturen an diesem Sud (z.B. eine Zutatenmenge) wirken sich also weiterhin aus, nur externe Preisänderungen nicht mehr. Anders als "Lagerbuchung sperren" wird dieser Haken ab einem Brautag-Alter von {{ auto_lock_age_days }} Tagen automatisch gesetzt (kein manuelles Speichern nötig) - lässt sich aber jederzeit wieder abwählen.</p>
   </section>
 
   <section class="card">

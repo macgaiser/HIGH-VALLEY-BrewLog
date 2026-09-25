@@ -185,6 +185,23 @@ class Batch(SQLModel, table=True):
     # Bestand rückwirkend etwas damit zu tun haben soll.
     inventory_deduction_locked: bool = False
 
+    # Eigener Haken, bewusst getrennt von inventory_deduction_locked: dort
+    # geht es um die Lagerbuchung, hier um die KOSTENRECHNUNG - beides kann
+    # unabhängig voneinander gewünscht sein (z.B. Lagerbuchung sperren, aber
+    # trotzdem noch mit aktuellen Preisen rechnen, oder umgekehrt). Ist der
+    # Haken gesetzt, wird beim Speichern ein Schnappschuss der aktuell
+    # berechneten Kosten in frozen_total_cost/frozen_cost_is_incomplete
+    # abgelegt (siehe _apply_form_to_batch in routers/batches.py) und die
+    # Sud-Ansicht zeigt diesen Schnappschuss statt live neu zu rechnen
+    # (siehe batch_calc.apply_frozen_cost) - so bleibt die Kostenrechnung
+    # eines abgeschlossenen Suds von späteren Preisänderungen im Lager oder
+    # den Einstellungen unberührt. Der Schnappschuss wird bei jedem weiteren
+    # Speichern mit angehaktem Haken neu erstellt, schützt also vor
+    # künftigen Preisänderungen, nicht vor eigenen Korrekturen an diesem Sud.
+    cost_locked: bool = False
+    frozen_total_cost: Optional[float] = None
+    frozen_cost_is_incomplete: Optional[bool] = None
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -296,6 +313,7 @@ class DryHopAddition(SQLModel, table=True):
     inventory_item_id: Optional[int] = Field(default=None, foreign_key="inventoryitem.id")
 
     batch: Batch = Relationship(back_populates="dry_hop_additions")
+    inventory_item: Optional["InventoryItem"] = Relationship()
 
 
 class CarbonationEntry(SQLModel, table=True):
@@ -367,6 +385,14 @@ class InventoryItem(SQLModel, table=True):
     color_ebc: Optional[float] = None  # Eigenfarbe des Malzes selbst (nur Kategorie Malz)
     amount: float = 0
     unit: str = "kg"
+    # Eigener Preis dieses Artikels - bei Malz in €/kg, bei Hopfen und
+    # Sonstiges in €/100g (siehe batch_calc.compute_metrics). Ist er nicht
+    # gesetzt, greift bei Malz/Hopfen der allgemeine Durchschnittspreis aus
+    # den Einstellungen; bei Sonstiges gibt es dafuer keinen Standardpreis,
+    # ein Artikel ohne eigenen Preis fliesst dann mit 0 in die Kostenrechnung
+    # ein. Bei Hefe (Pauschalkosten/Sud statt Mengenpreis) bleibt das Feld
+    # ungenutzt.
+    price: Optional[float] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     transactions: List["InventoryTransaction"] = Relationship(back_populates="item")

@@ -28,6 +28,18 @@ def _resolve_unit(category: InventoryCategory, form_unit: str) -> str:
     return form_unit.strip() or "kg"
 
 
+def _parse_price(raw: str) -> float | None:
+    """Leeres Feld -> kein eigener Preis (siehe batch_calc._malt_unit_cost/
+    _hop_row_unit_cost fuer das dann greifende Rueckfall-Verhalten)."""
+    raw = (raw or "").strip().replace(",", ".")
+    if not raw:
+        return None
+    try:
+        return round(float(raw), 2)
+    except ValueError:
+        return None
+
+
 def _parse_ebc(raw: str) -> float | None:
     """Parst eine EBC-Eingabe: eine einzelne Zahl ('4', '4,5') oder einen auf
     Malz-Datenblättern üblichen Bereich ('4-6') - dann wird der Mittelwert
@@ -77,6 +89,7 @@ async def inventory_create(request: Request, session: Session = Depends(get_sess
         spec=form.get("spec", "").strip(),
         color_ebc=_parse_ebc(form.get("color_ebc", "")),
         unit=_resolve_unit(category, form.get("unit", "")),
+        price=_parse_price(form.get("price", "")),
         amount=0,
     )
     session.add(item)
@@ -106,6 +119,7 @@ async def inventory_update(item_id: int, request: Request, session: Session = De
     item.spec = form.get("spec", "").strip()
     item.color_ebc = _parse_ebc(form.get("color_ebc", ""))
     item.unit = _resolve_unit(item.category, form.get("unit", ""))
+    item.price = _parse_price(form.get("price", ""))
     session.add(item)
     session.commit()
     return RedirectResponse("/inventory", status_code=303)

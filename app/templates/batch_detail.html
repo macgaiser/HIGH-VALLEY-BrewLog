@@ -34,6 +34,9 @@
 {% if batch.inventory_deduction_locked %}
 <p class="badge-locked">🔒 Lagerbuchung gesperrt – dieser Sud verändert beim Speichern keinen Lagerbestand</p>
 {% endif %}
+{% if batch.cost_locked %}
+<p class="badge-locked">🔒 Kosten eingefroren – Preisänderungen im Lager/den Einstellungen wirken sich nicht mehr auf diesen Sud aus</p>
+{% endif %}
 
 <div class="stat-grid">
   <div class="stat"><span class="stat-label">Stammwürze</span><span class="stat-value">{{ m.og_plato|fmt }} °P</span></div>

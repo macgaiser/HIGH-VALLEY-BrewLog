@@ -1,4 +1,5 @@
 import os
+from datetime import date
 from pathlib import Path
 
 from sqlalchemy import inspect, text
@@ -127,6 +128,7 @@ def init_db() -> None:
             session.commit()
 
         _fix_hop_alpha_fractions(session)
+        _auto_lock_old_costs(session)
 
 
 def _fix_hop_alpha_fractions(session: Session) -> None:
@@ -152,6 +154,33 @@ def _fix_hop_alpha_fractions(session: Session) -> None:
         if 0 < value < 1:
             item.spec = f"{value * 100:.1f}"
             session.add(item)
+            changed = True
+    if changed:
+        session.commit()
+
+
+def _auto_lock_old_costs(session: Session) -> None:
+    """Sammel-Durchlauf beim Start: sperrt die Kostenrechnung (siehe
+    batch_calc.auto_lock_cost/Batch.cost_locked) für alle bereits
+    vorhandenen Sude, deren Brautag mehr als AUTO_LOCK_AGE_DAYS zurückliegt
+    - ohne diesen Durchlauf würde das automatische Sperren erst greifen,
+    sobald jemand den einzelnen Sud zufällig aufruft (siehe batch_detail in
+    routers/batches.py, wo dieselbe Funktion für neu alternde Sude auch im
+    laufenden Betrieb greift). So sind bereits bestehende alte Sude sofort
+    nach dem nächsten Start erfasst, nicht erst nach manuellem Aufrufen
+    jedes einzelnen. Idempotent: bereits gesperrte Sude werden
+    übersprungen, ein erneuter Lauf ändert dann nichts mehr."""
+    from app.batch_calc import auto_lock_cost
+    from app.models import Batch, Settings
+
+    settings = session.get(Settings, 1)
+    if settings is None:
+        return
+    today = date.today()
+    changed = False
+    for batch in session.exec(select(Batch)).all():
+        if auto_lock_cost(batch, settings, today):
+            session.add(batch)
             changed = True
     if changed:
         session.commit()
