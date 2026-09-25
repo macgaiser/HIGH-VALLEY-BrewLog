@@ -185,6 +185,23 @@ class Batch(SQLModel, table=True):
     # Bestand rückwirkend etwas damit zu tun haben soll.
     inventory_deduction_locked: bool = False
 
+    # Eigener Haken, bewusst getrennt von inventory_deduction_locked: dort
+    # geht es um die Lagerbuchung, hier um die KOSTENRECHNUNG - beides kann
+    # unabhängig voneinander gewünscht sein (z.B. Lagerbuchung sperren, aber
+    # trotzdem noch mit aktuellen Preisen rechnen, oder umgekehrt). Ist der
+    # Haken gesetzt, wird beim Speichern ein Schnappschuss der aktuell
+    # berechneten Kosten in frozen_total_cost/frozen_cost_is_incomplete
+    # abgelegt (siehe _apply_form_to_batch in routers/batches.py) und die
+    # Sud-Ansicht zeigt diesen Schnappschuss statt live neu zu rechnen
+    # (siehe batch_calc.apply_frozen_cost) - so bleibt die Kostenrechnung
+    # eines abgeschlossenen Suds von späteren Preisänderungen im Lager oder
+    # den Einstellungen unberührt. Der Schnappschuss wird bei jedem weiteren
+    # Speichern mit angehaktem Haken neu erstellt, schützt also vor
+    # künftigen Preisänderungen, nicht vor eigenen Korrekturen an diesem Sud.
+    cost_locked: bool = False
+    frozen_total_cost: Optional[float] = None
+    frozen_cost_is_incomplete: Optional[bool] = None
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

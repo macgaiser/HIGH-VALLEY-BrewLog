@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from sqlmodel import Session, select
 
-from app.batch_calc import compute_metrics, resolve_color_hex
+from app.batch_calc import apply_frozen_cost, compute_metrics, resolve_color_hex
 from app.beerxml import BeerXmlParseError, build_recipe_xml, create_batch_from_recipe, find_inventory_item, parse_recipes_xml
 from app.database import get_session
 from app.inventory import sync_batch_deductions
@@ -372,6 +372,7 @@ async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
     batch.brew_date = _d(form.get("brew_date"))
     batch.bottling_date = _d(form.get("bottling_date"))
     batch.inventory_deduction_locked = form.get("inventory_deduction_locked") == "on"
+    batch.cost_locked = form.get("cost_locked") == "on"
     batch.target_volume_l = _f(form.get("target_volume_l"))
     batch.color_ebc = _f(form.get("color_ebc"))
     batch.main_water_l = _f(form.get("main_water_l"))
@@ -557,6 +558,24 @@ async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
 
     session.commit()
     session.refresh(batch)
+
+    # Kosten-Schnappschuss (siehe Batch.cost_locked/batch_calc.apply_frozen_
+    # cost): erst NACH dem Speichern der Zutatenzeilen oben berechnen, damit
+    # er die gerade eingegebenen Mengen/Verknüpfungen dieses Speicherns
+    # widerspiegelt. Wird bei jedem Speichern mit angehaktem Haken neu
+    # erstellt (schützt vor künftigen Preisänderungen im Lager, nicht vor
+    # eigenen Korrekturen an diesem Sud); beim Abwählen wird er verworfen.
+    if batch.cost_locked:
+        settings = session.get(Settings, 1)
+        snapshot = compute_metrics(batch, settings)
+        batch.frozen_total_cost = snapshot.total_cost
+        batch.frozen_cost_is_incomplete = snapshot.cost_is_incomplete
+    else:
+        batch.frozen_total_cost = None
+        batch.frozen_cost_is_incomplete = None
+    session.add(batch)
+    session.commit()
+
     sync_batch_deductions(session, batch)
 
 
@@ -573,6 +592,7 @@ def batch_detail(batch_id: int, request: Request, session: Session = Depends(get
     batch = session.get(Batch, batch_id)
     settings = session.get(Settings, 1)
     metrics = compute_metrics(batch, settings)
+    apply_frozen_cost(batch, metrics)
     prev_batch = None
     next_batch = None
     if batch:

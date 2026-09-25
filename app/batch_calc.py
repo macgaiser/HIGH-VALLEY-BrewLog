@@ -6,12 +6,22 @@ berechnet - so bleiben sie immer konsistent, wenn ein Sud nachträglich
 bearbeitet wird.
 
 Malz-/Hopfenkosten werden je Zutatenzeile berechnet, nicht pauschal über die
-Gesamtmenge: hat der verknüpfte Lagerartikel einen eigenen Preis
-hinterlegt, zählt der; sonst greift bei Malz/Hopfen der allgemeine
-Durchschnittspreis aus den Einstellungen. Bei "Sonstiges" (z.B. Klärmittel,
-über den Hopfengaben-Dialog ausgewählt) gibt es keinen Durchschnittspreis -
-ohne eigenen Preis fließt eine solche Zeile mit 0 in die Kostenrechnung ein
-(siehe _malt_unit_cost/_hop_row_unit_cost).
+Gesamtmenge, und nur wenn eine Preisgrundlage existiert: hat der
+verknüpfte Lagerartikel einen eigenen Preis hinterlegt, zählt der; sonst
+greift bei Malz/Hopfen der allgemeine Durchschnittspreis aus den
+Einstellungen. Bei "Sonstiges" (z.B. Klärmittel, über den Hopfengaben-
+Dialog ausgewählt) gibt es keinen Durchschnittspreis. Eine freitextliche,
+mit KEINEM Lagerartikel verknüpfte Zeile hat grundsätzlich keine
+Preisgrundlage und fließt bewusst mit 0 in die Kostenrechnung ein statt
+den Durchschnittspreis zu unterstellen (siehe _malt_unit_cost/
+_hop_row_unit_cost) - wer den Durchschnittspreis dafür will, verknüpft die
+Zeile mit einem Lagerartikel.
+
+Ist ein Sud über Batch.cost_locked "eingefroren", zeigt die Sud-Ansicht
+statt der live berechneten Kosten den beim letzten Speichern erstellten
+Schnappschuss (siehe apply_frozen_cost) - Preisänderungen im Lager oder
+den Einstellungen wirken sich dann nicht mehr rückwirkend auf diesen Sud
+aus.
 """
 
 from __future__ import annotations
@@ -75,9 +85,14 @@ def resolve_color_hex(batch: Batch) -> str | None:
 def _malt_unit_cost(item, settings: Settings) -> float:
     """Preis in €/kg fuer eine Schüttungsposition: eigener Preis des
     verknüpften Lagerartikels, falls gesetzt, sonst der allgemeine
-    Malz-Durchschnittspreis aus den Einstellungen - genau wie bei Zeilen
-    ohne Lagerartikel-Verknüpfung (freitextliche Eingabe)."""
-    if item is not None and item.price is not None:
+    Malz-Durchschnittspreis aus den Einstellungen. Eine freitextliche, mit
+    KEINEM Lagerartikel verknüpfte Zeile hat keine Preisgrundlage und
+    bekommt bewusst 0 statt des Durchschnittspreises - wer den
+    Durchschnittspreis dafür will, verknüpft die Zeile mit einem
+    Lagerartikel."""
+    if item is None:
+        return 0.0
+    if item.price is not None:
         return item.price
     return settings.malt_cost_per_kg
 
@@ -85,15 +100,18 @@ def _malt_unit_cost(item, settings: Settings) -> float:
 def _hop_row_unit_cost(item, settings: Settings) -> float:
     """Preis in €/100g fuer eine Hopfengaben-/Stopfhopfen-Zeile: eigener
     Preis des verknüpften Lagerartikels, falls gesetzt, sonst - nur bei
-    Kategorie Hopfen (inkl. freitextlicher, nicht verknüpfter Zeilen, die
-    sich nicht anders einordnen lassen) - der allgemeine Hopfen-
-    Durchschnittspreis. Ein verknüpfter "Sonstiges"-Lagerartikel ohne
-    eigenen Preis bekommt bewusst KEINEN Rückfall auf den Hopfenpreis,
-    sondern 0 - eine sonstige Zutat (Klärmittel, Wasserzusatz o.ä.) hat mit
-    dem Hopfenpreis nichts zu tun."""
-    if item is not None and item.price is not None:
+    Kategorie Hopfen - der allgemeine Hopfen-Durchschnittspreis. Sowohl ein
+    verknüpfter "Sonstiges"-Lagerartikel ohne eigenen Preis als auch eine
+    freitextliche, nicht verknüpfte Zeile bekommen bewusst 0 statt des
+    Hopfenpreises - fuer beide gibt es keine verlässliche Preisgrundlage
+    (eine sonstige Zutat hat mit dem Hopfenpreis nichts zu tun, und eine
+    freitextliche Zeile laesst sich ohne Verknüpfung nicht einmal einer
+    Kategorie zuordnen)."""
+    if item is None:
+        return 0.0
+    if item.price is not None:
         return item.price
-    if item is not None and item.category == InventoryCategory.sonstiges:
+    if item.category == InventoryCategory.sonstiges:
         return 0.0
     return settings.hop_cost_per_100g
 
@@ -199,3 +217,22 @@ def compute_metrics(batch: Batch, settings: Settings) -> BatchMetrics:
     m.cost_is_incomplete = not batch.brew_day_tasks
 
     return m
+
+
+def apply_frozen_cost(batch: Batch, m: BatchMetrics) -> None:
+    """Ueberschreibt die live berechneten Kosten in `m` mit dem beim
+    Einfrieren gespeicherten Schnappschuss (siehe Batch.cost_locked), falls
+    vorhanden - so bleibt die Kostenrechnung eines eingefrorenen Suds von
+    späteren Preisänderungen im Lager oder den Einstellungen unberührt.
+    compute_metrics() selbst bleibt bewusst immer eine reine Live-
+    Berechnung (u.a. weil genau dieser Wert beim Speichern als neuer
+    Schnappschuss abgelegt wird, siehe _apply_form_to_batch in
+    routers/batches.py) - der Aufrufer entscheidet an dieser einen Stelle,
+    ob der eingefrorene Wert stattdessen angezeigt werden soll."""
+    if not batch.cost_locked or batch.frozen_total_cost is None:
+        return
+    m.total_cost = batch.frozen_total_cost
+    m.cost_is_incomplete = bool(batch.frozen_cost_is_incomplete)
+    if batch.target_volume_l:
+        m.cost_per_liter = round(m.total_cost / batch.target_volume_l, 2)
+        m.cost_per_0_5l = round(m.cost_per_liter / 2, 2)
