@@ -4,6 +4,14 @@ Diese Werte werden bewusst nicht in der Datenbank gespeichert, sondern bei
 jedem Aufruf aus den Rohdaten (Schüttung, Hopfengaben, Gärverlauf, ...) neu
 berechnet - so bleiben sie immer konsistent, wenn ein Sud nachträglich
 bearbeitet wird.
+
+Malz-/Hopfenkosten werden je Zutatenzeile berechnet, nicht pauschal über die
+Gesamtmenge: hat der verknüpfte Lagerartikel einen eigenen Preis
+hinterlegt, zählt der; sonst greift bei Malz/Hopfen der allgemeine
+Durchschnittspreis aus den Einstellungen. Bei "Sonstiges" (z.B. Klärmittel,
+über den Hopfengaben-Dialog ausgewählt) gibt es keinen Durchschnittspreis -
+ohne eigenen Preis fließt eine solche Zeile mit 0 in die Kostenrechnung ein
+(siehe _malt_unit_cost/_hop_row_unit_cost).
 """
 
 from __future__ import annotations
@@ -12,7 +20,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from app import formulas
-from app.models import Batch, Settings
+from app.models import Batch, InventoryCategory, Settings
 
 
 @dataclass
@@ -62,6 +70,32 @@ def resolve_color_hex(batch: Batch) -> str | None:
     if color_ebc is None:
         return None
     return formulas.ebc_to_hex(color_ebc)
+
+
+def _malt_unit_cost(item, settings: Settings) -> float:
+    """Preis in €/kg fuer eine Schüttungsposition: eigener Preis des
+    verknüpften Lagerartikels, falls gesetzt, sonst der allgemeine
+    Malz-Durchschnittspreis aus den Einstellungen - genau wie bei Zeilen
+    ohne Lagerartikel-Verknüpfung (freitextliche Eingabe)."""
+    if item is not None and item.price is not None:
+        return item.price
+    return settings.malt_cost_per_kg
+
+
+def _hop_row_unit_cost(item, settings: Settings) -> float:
+    """Preis in €/100g fuer eine Hopfengaben-/Stopfhopfen-Zeile: eigener
+    Preis des verknüpften Lagerartikels, falls gesetzt, sonst - nur bei
+    Kategorie Hopfen (inkl. freitextlicher, nicht verknüpfter Zeilen, die
+    sich nicht anders einordnen lassen) - der allgemeine Hopfen-
+    Durchschnittspreis. Ein verknüpfter "Sonstiges"-Lagerartikel ohne
+    eigenen Preis bekommt bewusst KEINEN Rückfall auf den Hopfenpreis,
+    sondern 0 - eine sonstige Zutat (Klärmittel, Wasserzusatz o.ä.) hat mit
+    dem Hopfenpreis nichts zu tun."""
+    if item is not None and item.price is not None:
+        return item.price
+    if item is not None and item.category == InventoryCategory.sonstiges:
+        return 0.0
+    return settings.hop_cost_per_100g
 
 
 def compute_metrics(batch: Batch, settings: Settings) -> BatchMetrics:
@@ -141,8 +175,16 @@ def compute_metrics(batch: Batch, settings: Settings) -> BatchMetrics:
         m.abv_display = batch.recorded_abv_text
         m.abv_is_recorded = True
 
-    m.malt_cost = round(m.total_grain_kg * settings.malt_cost_per_kg, 2)
-    m.hop_cost = round(m.total_hop_g * settings.hop_cost_per_100g / 100, 2)
+    m.malt_cost = round(
+        sum((g.amount_kg or 0) * _malt_unit_cost(g.inventory_item, settings) for g in batch.grain_additions), 2
+    )
+    m.hop_cost = round(
+        sum((h.amount_g or 0) / 100 * _hop_row_unit_cost(h.inventory_item, settings) for h in batch.hop_additions)
+        + sum(
+            (d.amount_g or 0) / 100 * _hop_row_unit_cost(d.inventory_item, settings) for d in batch.dry_hop_additions
+        ),
+        2,
+    )
     m.yeast_cost = settings.yeast_flat_cost if batch.yeast_additions else 0.0
     total_minutes = sum(t.planned_duration_min or 0 for t in batch.brew_day_tasks)
     m.labor_cost = round(total_minutes / 60 * settings.labor_cost_per_hour, 2)

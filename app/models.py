@@ -296,6 +296,7 @@ class DryHopAddition(SQLModel, table=True):
     inventory_item_id: Optional[int] = Field(default=None, foreign_key="inventoryitem.id")
 
     batch: Batch = Relationship(back_populates="dry_hop_additions")
+    inventory_item: Optional["InventoryItem"] = Relationship()
 
 
 class CarbonationEntry(SQLModel, table=True):
@@ -367,6 +368,14 @@ class InventoryItem(SQLModel, table=True):
     color_ebc: Optional[float] = None  # Eigenfarbe des Malzes selbst (nur Kategorie Malz)
     amount: float = 0
     unit: str = "kg"
+    # Eigener Preis dieses Artikels - bei Malz in €/kg, bei Hopfen und
+    # Sonstiges in €/100g (siehe batch_calc.compute_metrics). Ist er nicht
+    # gesetzt, greift bei Malz/Hopfen der allgemeine Durchschnittspreis aus
+    # den Einstellungen; bei Sonstiges gibt es dafuer keinen Standardpreis,
+    # ein Artikel ohne eigenen Preis fliesst dann mit 0 in die Kostenrechnung
+    # ein. Bei Hefe (Pauschalkosten/Sud statt Mengenpreis) bleibt das Feld
+    # ungenutzt.
+    price: Optional[float] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     transactions: List["InventoryTransaction"] = Relationship(back_populates="item")
