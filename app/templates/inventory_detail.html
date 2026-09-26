@@ -8,10 +8,26 @@
     <a class="btn" href="/inventory">Zurück</a>
   </div>
 </div>
-<p class="subtitle">{{ item.category.value|capitalize }}{% if item.brand %} · {{ item.brand }}{% endif %}{% if item.category.value == "hopfen" and item.spec %} · {{ item.spec }} % Alphasäure{% endif %}{% if item.category.value == "malz" and item.color_ebc %} · {{ item.color_ebc|fmt(1) }} EBC{% endif %}{% if item.price is not none %} · {{ item.price|fmt(2) }} € / {{ "kg" if item.category.value == "malz" else "100 g" }}{% endif %}</p>
+<p class="subtitle">{{ item.category.value|capitalize }}{% if item.brand %} · {{ item.brand }}{% endif %}{% if item.category.value == "hopfen" and item.spec %} · {{ item.spec }} % Alphasäure{% endif %}{% if item.category.value == "malz" and item.color_ebc %} · {{ item.color_ebc|fmt(1) }} EBC{% endif %}</p>
 
 <div class="stat-grid">
   <div class="stat"><span class="stat-label">Aktueller Bestand</span><span class="stat-value">{{ item.amount|round(2) }} {{ item.unit }}</span></div>
+  {% if item.category.value != "hefe" %}
+  {% set price_unit = "kg" if item.category.value == "malz" else "100 g" %}
+  <div class="stat">
+    <span class="stat-label">Preis</span>
+    {% if item.price is not none %}
+    <span class="stat-value">{{ item.price|fmt(2) }} € / {{ price_unit }}</span>
+    <span class="stat-sub">seit {{ item.price_updated_at|de_date }}</span>
+    {% elif item.category.value == "sonstiges" %}
+    <span class="stat-value">–</span>
+    <span class="stat-sub">kein eigener Preis – wird mit 0 € berechnet</span>
+    {% else %}
+    <span class="stat-value">–</span>
+    <span class="stat-sub">Standard: {{ (settings.malt_cost_per_kg if item.category.value == "malz" else settings.hop_cost_per_100g)|fmt(2) }} € / {{ price_unit }}</span>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
 <section class="card">

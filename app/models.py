@@ -393,6 +393,11 @@ class InventoryItem(SQLModel, table=True):
     # ein. Bei Hefe (Pauschalkosten/Sud statt Mengenpreis) bleibt das Feld
     # ungenutzt.
     price: Optional[float] = None
+    # Wird automatisch gesetzt, sobald sich price aendert (siehe
+    # routers/inventory.py) - None, solange kein eigener Preis hinterlegt
+    # ist. Zeigt in der Lagerartikel-Ansicht an, seit wann der aktuelle
+    # Preis gilt.
+    price_updated_at: Optional[datetime] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     transactions: List["InventoryTransaction"] = Relationship(back_populates="item")
