@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
@@ -6,7 +7,7 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.inventory import restock
-from app.models import InventoryCategory, InventoryItem
+from app.models import InventoryCategory, InventoryItem, Settings
 from app.templating import templates
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
@@ -82,6 +83,7 @@ def inventory_new_form(request: Request):
 async def inventory_create(request: Request, session: Session = Depends(get_session)):
     form = await request.form()
     category = InventoryCategory(form.get("category"))
+    price = _parse_price(form.get("price", ""))
     item = InventoryItem(
         category=category,
         name=form.get("name", "").strip(),
@@ -89,7 +91,8 @@ async def inventory_create(request: Request, session: Session = Depends(get_sess
         spec=form.get("spec", "").strip(),
         color_ebc=_parse_ebc(form.get("color_ebc", "")),
         unit=_resolve_unit(category, form.get("unit", "")),
-        price=_parse_price(form.get("price", "")),
+        price=price,
+        price_updated_at=datetime.utcnow() if price is not None else None,
         amount=0,
     )
     session.add(item)
@@ -119,7 +122,10 @@ async def inventory_update(item_id: int, request: Request, session: Session = De
     item.spec = form.get("spec", "").strip()
     item.color_ebc = _parse_ebc(form.get("color_ebc", ""))
     item.unit = _resolve_unit(item.category, form.get("unit", ""))
-    item.price = _parse_price(form.get("price", ""))
+    new_price = _parse_price(form.get("price", ""))
+    if new_price != item.price:
+        item.price_updated_at = datetime.utcnow() if new_price is not None else None
+    item.price = new_price
     session.add(item)
     session.commit()
     return RedirectResponse("/inventory", status_code=303)
@@ -157,6 +163,8 @@ def inventory_delete(item_id: int, session: Session = Depends(get_session)):
 def inventory_detail(item_id: int, request: Request, session: Session = Depends(get_session)):
     item = session.get(InventoryItem, item_id)
     transactions = sorted(item.transactions, key=lambda t: t.created_at, reverse=True)
+    settings = session.get(Settings, 1)
     return templates.TemplateResponse(
-        "inventory_detail.html", {"request": request, "item": item, "transactions": transactions}
+        "inventory_detail.html",
+        {"request": request, "item": item, "transactions": transactions, "settings": settings},
     )
