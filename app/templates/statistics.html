@@ -65,7 +65,7 @@
   {% if key in result.item_usage %}
   <section class="card">
     <h2>{{ cat_label }}</h2>
-    <div class="chart-box chart-box-tall"><canvas id="chart-item-{{ key }}"></canvas></div>
+    <div class="chart-box"><canvas id="chart-item-{{ key }}"></canvas></div>
   </section>
   {% endif %}
   {% endfor %}
@@ -307,25 +307,38 @@
 
   {% for key, unit in [("malz", "kg"), ("hopfen", "g"), ("hefe", "Sude")] %}
   {% if key in result.item_usage %}
-  new Chart(document.getElementById("chart-item-{{ key }}"), {
-    type: "bar",
-    data: {
-      labels: {{ result.item_usage[key]|map(attribute='name')|list|tojson }}.map(function (l) { return wrapChartLabel(l, 16); }),
-      datasets: [{
-        label: "{{ unit }}",
-        data: {{ result.item_usage[key]|map(attribute='amount')|list|tojson }},
-        backgroundColor: "#6a9e34",
-        borderRadius: 4,
-      }],
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true, title: { display: true, text: "{{ unit }}" } } },
-    },
-  });
+  (function () {
+    var itemLabels = {{ result.item_usage[key]|map(attribute='name')|list|tojson }}.map(function (l) { return wrapChartLabel(l, 16); });
+    var canvas = document.getElementById("chart-item-{{ key }}");
+    // Chart.js blendet Tick-Labels per autoSkip aus, sobald der verfuegbare
+    // Platz fuer alle Zeilen (inkl. der zweizeilig umgebrochenen) nicht
+    // reicht - ohne diese beiden Zeilen fehlte dann scheinbar zufaellig
+    // jeder zweite Name. Container-Hoehe an die Anzahl/Zeilenzahl der
+    // Labels anpassen, damit gar nicht erst zu wenig Platz entsteht.
+    canvas.parentElement.style.height = Math.max(260, itemLabels.length * 46 + 70) + "px";
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: itemLabels,
+        datasets: [{
+          label: "{{ unit }}",
+          data: {{ result.item_usage[key]|map(attribute='amount')|list|tojson }},
+          backgroundColor: "#6a9e34",
+          borderRadius: 4,
+        }],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, title: { display: true, text: "{{ unit }}" } },
+          y: { ticks: { autoSkip: false } },
+        },
+      },
+    });
+  })();
   {% endif %}
   {% endfor %}
 
