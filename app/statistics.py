@@ -281,8 +281,23 @@ def _item_usage(batches: list[Batch], top_n: int = 10) -> dict[str, list[ItemUsa
         )
 
     malt_entries = [(g.malt_name, g.amount_kg or 0) for b in batches for g in b.grain_additions]
-    hop_entries = [(h.hop_name, h.amount_g or 0) for b in batches for h in b.hop_additions] + [
-        (d.hop_name, d.amount_g or 0) for b in batches for d in b.dry_hop_additions
+    # "Top Hopfen" soll nur echten Hopfen zeigen - ueber den Hopfengaben-
+    # Dialog koennen dort auch Lagerartikel der Kategorie "Sonstiges"
+    # ausgewaehlt werden (Klaermittel, Wasserzusaetze usw., siehe
+    # beerxml.build_recipe_xml), die gehoeren hier nicht rein. Freitextliche,
+    # nicht verknuepfte Zeilen lassen sich mangels Kategorie nicht abgrenzen
+    # und zaehlen wie ueberall sonst in der App (siehe batch_calc.py) als
+    # Hopfen.
+    hop_entries = [
+        (h.hop_name, h.amount_g or 0)
+        for b in batches
+        for h in b.hop_additions
+        if not h.inventory_item or h.inventory_item.category == InventoryCategory.hopfen
+    ] + [
+        (d.hop_name, d.amount_g or 0)
+        for b in batches
+        for d in b.dry_hop_additions
+        if not d.inventory_item or d.inventory_item.category == InventoryCategory.hopfen
     ]
     # Bei Hefe interessiert nicht die Menge (oft nur ein Päckchen/eine feste
     # Anstellmenge, teils in unterschiedlichen Einheiten wie g/ml erfasst),
