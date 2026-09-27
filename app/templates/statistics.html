@@ -65,7 +65,9 @@
   {% if key in result.item_usage %}
   <section class="card">
     <h2>{{ cat_label }}</h2>
-    <div class="chart-box"><canvas id="chart-item-{{ key }}"></canvas></div>
+    <div class="chart-box chart-box-scroll">
+      <div class="chart-box-scroll-inner"><canvas id="chart-item-{{ key }}"></canvas></div>
+    </div>
   </section>
   {% endif %}
   {% endfor %}
