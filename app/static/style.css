@@ -570,6 +570,7 @@ tr.row-selected:hover { background: rgba(240, 190, 51, 0.3); }
 }
 .stat-label { font-size: 0.76rem; color: var(--muted); }
 .stat-value { font-family: var(--font-display); font-size: 1.55rem; color: var(--brown); }
+.stat-sub { font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; }
 
 /* Statistik-Seite */
 .stat-period-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; margin: 1rem 0; }
