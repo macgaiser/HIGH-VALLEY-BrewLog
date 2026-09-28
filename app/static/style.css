@@ -599,6 +599,12 @@ tr.row-selected:hover { background: rgba(240, 190, 51, 0.3); }
 .stat-charts-grid > .card { margin: 0; min-width: 0; }
 .chart-box { position: relative; height: 260px; margin-top: 0.5rem; }
 .chart-box-tall { height: 360px; }
+/* Top Malze/Hopfen/Hefen: zeigt immer alle im Zeitraum verwendeten
+   Positionen (nicht nur die Top 10), haelt die sichtbare Hoehe aber auf
+   5 Zeilen fest (5 * 46px + 70px, siehe JS-Formel) - alles darueber
+   hinaus ist per vertikalem Scrollen erreichbar. */
+.chart-box-scroll-y { height: 300px; overflow-y: auto; overflow-x: hidden; }
+.chart-box-scroll-y-inner { position: relative; width: 100%; }
 
 /* Bierstil x Monat-Heatmap: normale .table-Zellen, nur die Datenzellen
    bekommen zusaetzlich eine per Intensitaet eingefaerbte Hintergrundfarbe
