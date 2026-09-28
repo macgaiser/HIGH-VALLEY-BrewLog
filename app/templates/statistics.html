@@ -65,7 +65,9 @@
   {% if key in result.item_usage %}
   <section class="card">
     <h2>{{ cat_label }}</h2>
-    <div class="chart-box"><canvas id="chart-item-{{ key }}"></canvas></div>
+    <div class="chart-box chart-box-scroll-y">
+      <div class="chart-box-scroll-y-inner"><canvas id="chart-item-{{ key }}"></canvas></div>
+    </div>
   </section>
   {% endif %}
   {% endfor %}
@@ -313,8 +315,11 @@
     // Chart.js blendet Tick-Labels per autoSkip aus, sobald der verfuegbare
     // Platz fuer alle Zeilen (inkl. der zweizeilig umgebrochenen) nicht
     // reicht - ohne diese beiden Zeilen fehlte dann scheinbar zufaellig
-    // jeder zweite Name. Container-Hoehe an die Anzahl/Zeilenzahl der
-    // Labels anpassen, damit gar nicht erst zu wenig Platz entsteht.
+    // jeder zweite Name. Der innere Container (canvas.parentElement) bekommt
+    // daher die volle Hoehe fuer ALLE Positionen (nicht nur die Top 10) und
+    // wuerde damit bei vielen Positionen sehr hoch werden - das umschliessende
+    // .chart-box-scroll-y haelt die sichtbare Hoehe fest auf 5 Zeilen
+    // (siehe Formel unten) und macht den Rest per vertikalem Scrollen erreichbar.
     canvas.parentElement.style.height = Math.max(260, itemLabels.length * 46 + 70) + "px";
     new Chart(canvas, {
       type: "bar",

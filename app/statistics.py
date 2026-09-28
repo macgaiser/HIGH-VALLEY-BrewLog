@@ -264,7 +264,7 @@ def _color_share(batches: list[Batch]) -> list[ColorShare]:
     return result
 
 
-def _item_usage(batches: list[Batch], top_n: int = 10) -> dict[str, list[ItemUsage]]:
+def _item_usage(batches: list[Batch]) -> dict[str, list[ItemUsage]]:
     def aggregate(entries: list[tuple[str, float]]) -> list[tuple[str, float, int]]:
         totals: dict[str, float] = {}
         counts: dict[str, int] = {}
@@ -307,7 +307,7 @@ def _item_usage(batches: list[Batch], top_n: int = 10) -> dict[str, list[ItemUsa
 
     result: dict[str, list[ItemUsage]] = {}
     for key, entries, unit in (("malz", malt_entries, "kg"), ("hopfen", hop_entries, "g"), ("hefe", yeast_entries, "Sude")):
-        aggregated = aggregate(entries)[:top_n]
+        aggregated = aggregate(entries)
         if aggregated:
             result[key] = [ItemUsage(name=n, amount=round(a, 2), unit=unit, batch_count=c) for n, a, c in aggregated]
     return result
