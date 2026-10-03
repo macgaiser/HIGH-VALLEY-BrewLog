@@ -39,6 +39,7 @@
 {% set font_sizes = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.4, 2.8] %}
 <section class="card">
   <h2>Einstellungen für Etikettengenerator</h2>
+  <p class="hint">Hier werden Grafiken hochgeladen sowie Größe, Markenname und die <strong>Standards</strong> festgelegt. Welche Grafik und Farbe ein einzelner Sud verwendet, wählst du direkt beim Etikett-Drucken - ohne Auswahl gilt der Standard.</p>
 
   <label>Markenname Zeile 1 (z.B. eine kleine Kennnummer über dem Markennamen)</label>
   <div class="inline-form">
@@ -60,14 +61,14 @@
     </select>
   </div>
 
-  <h2>Akzentfarbe <button type="button" class="info-btn" data-info-toggle="accent-color-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
-  <p class="hint info-popover" id="accent-color-hint" hidden>Betrifft alles auf dem Etikett einheitlich - Rahmen, Schrift, Symbole, Schnittlinie. Keine separaten Farben pro Element nötig. Das dunkle Etikett lässt sich über den Schalter "Dunkler Hintergrund" beim Drucken aktivieren (z.B. für Stout).</p>
+  <h2>Standard-Akzentfarbe <button type="button" class="info-btn" data-info-toggle="accent-color-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
+  <p class="hint info-popover" id="accent-color-hint" hidden>Standardfarbe für alle Sude, bei denen beim Etikett-Drucken keine eigene Farbe gewählt wurde. Betrifft alles auf dem Etikett einheitlich - Rahmen, Schrift, Symbole, Schnittlinie. Das dunkle Etikett lässt sich pro Sud über den Schalter "Dunkler Hintergrund" im Etikett-Dialog aktivieren (z.B. für Stout).</p>
   <div class="color-field-row">
-    <label for="label_accent_light">Akzentfarbe helles Etikett</label>
+    <label for="label_accent_light">Standard-Akzentfarbe helles Etikett</label>
     <input type="color" id="label_accent_light" name="label_accent_light" value="{{ s.label_accent_light }}" form="settings-form">
   </div>
   <div class="color-field-row">
-    <label for="label_accent_dark">Akzentfarbe dunkles Etikett</label>
+    <label for="label_accent_dark">Standard-Akzentfarbe dunkles Etikett</label>
     <input type="color" id="label_accent_dark" name="label_accent_dark" value="{{ s.label_accent_dark }}" form="settings-form">
   </div>
 
@@ -76,19 +77,19 @@
   </div>
 
   <h2>Logo</h2>
-  <p class="hint">Das aktive Logo wird auf allen gedruckten Etiketten verwendet. Bereits hochgeladene Logos bleiben gespeichert und können jederzeit wieder ausgewählt werden.</p>
+  <p class="hint">Das Standard-Logo wird für alle Sude verwendet, bei denen beim Etikett-Drucken kein anderes gewählt wurde. Hochgeladene Logos bleiben gespeichert und lassen sich pro Sud im Etikett-Dialog auswählen.</p>
   <form method="post" action="/settings/logos" enctype="multipart/form-data" class="inline-form">
     <input type="file" name="file" accept="image/*" required>
-    <button class="btn btn-primary" type="submit">Hochladen &amp; verwenden</button>
+    <button class="btn btn-primary" type="submit">Hochladen</button>
   </form>
   <div class="logo-gallery">
     <div class="logo-gallery-item {{ 'active' if not s.active_logo_id }}">
       <img src="/static/img/logo-shield.png" alt="Standard-Logo">
       {% if not s.active_logo_id %}
-      <span class="badge-active">Aktiv</span>
+      <span class="badge-active">Standard</span>
       {% else %}
       <form method="post" action="/settings/logos/reset">
-        <button class="btn btn-small" type="submit">Verwenden</button>
+        <button class="btn btn-small" type="submit">Als Standard</button>
       </form>
       {% endif %}
       <form method="post" action="/settings/logos/default-scale" class="logo-scale-form">
@@ -103,10 +104,10 @@
     <div class="logo-gallery-item {{ 'active' if s.active_logo_id == logo.id }}">
       <img src="/logos/{{ logo.filename }}" alt="{{ logo.original_filename }}">
       {% if s.active_logo_id == logo.id %}
-      <span class="badge-active">Aktiv</span>
+      <span class="badge-active">Standard</span>
       {% else %}
       <form method="post" action="/settings/logos/{{ logo.id }}/activate">
-        <button class="btn btn-small" type="submit">Verwenden</button>
+        <button class="btn btn-small" type="submit">Als Standard</button>
       </form>
       {% endif %}
       <form method="post" action="/settings/logos/{{ logo.id }}/scale" class="logo-scale-form">
@@ -122,19 +123,19 @@
   <p class="hint">Größe: wie viel Fläche das Logo in seinem Feld auf dem Etikett füllt (in %) - lässt sich je Logo einzeln einstellen, z.B. wenn ein Logo bereits viel eigenen Rand mitbringt.</p>
 
   <h2>Rahmengrafik (Ranke) <button type="button" class="info-btn" data-info-toggle="border-graphic-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
-  <p class="hint info-popover" id="border-graphic-hint" hidden>Ziert den oberen/unteren Rand jedes Etiketts. Es ist bewusst keine Grafik vorinstalliert (z.B. eine Hopfenranke unterliegt in der Regel einer eigenen Bildlizenz) - lade hier deine eigene, lizenzierte Grafik hoch. Am besten ein sehr breites, niedriges Bild mit transparentem Hintergrund (die Grafik wird automatisch auf die volle Etikettenbreite skaliert, die Höhe ergibt sich aus ihrem Seitenverhältnis - ein Format um die 580×85px bzw. ca. 6,8:1 passt gut zum restlichen Layout).</p>
+  <p class="hint info-popover" id="border-graphic-hint" hidden>Ziert den oberen/unteren Rand jedes Etiketts (Standard für alle Sude, pro Sud im Etikett-Dialog änderbar). Es ist bewusst keine Grafik vorinstalliert (z.B. eine Hopfenranke unterliegt in der Regel einer eigenen Bildlizenz) - lade hier deine eigene, lizenzierte Grafik hoch. Am besten ein sehr breites, niedriges Bild mit transparentem Hintergrund (die Grafik wird automatisch auf die volle Etikettenbreite skaliert, die Höhe ergibt sich aus ihrem Seitenverhältnis - ein Format um die 580×85px bzw. ca. 6,8:1 passt gut zum restlichen Layout).</p>
   <form method="post" action="/settings/border-graphics" enctype="multipart/form-data" class="inline-form">
     <input type="file" name="file" accept="image/*" required>
-    <button class="btn btn-primary" type="submit">Hochladen &amp; verwenden</button>
+    <button class="btn btn-primary" type="submit">Hochladen</button>
   </form>
   <div class="logo-gallery">
     <div class="logo-gallery-item {{ 'active' if not s.active_border_graphic_id }}">
       <span class="hint" style="display:flex; align-items:center; justify-content:center; height:70px;">Kein Bild</span>
       {% if not s.active_border_graphic_id %}
-      <span class="badge-active">Aktiv</span>
+      <span class="badge-active">Standard</span>
       {% else %}
       <form method="post" action="/settings/border-graphics/reset">
-        <button class="btn btn-small" type="submit">Verwenden</button>
+        <button class="btn btn-small" type="submit">Als Standard</button>
       </form>
       {% endif %}
     </div>
@@ -142,10 +143,10 @@
     <div class="logo-gallery-item {{ 'active' if s.active_border_graphic_id == graphic.id }}">
       <img src="/border-graphics/{{ graphic.filename }}" alt="{{ graphic.original_filename }}">
       {% if s.active_border_graphic_id == graphic.id %}
-      <span class="badge-active">Aktiv</span>
+      <span class="badge-active">Standard</span>
       {% else %}
       <form method="post" action="/settings/border-graphics/{{ graphic.id }}/activate">
-        <button class="btn btn-small" type="submit">Verwenden</button>
+        <button class="btn btn-small" type="submit">Als Standard</button>
       </form>
       {% endif %}
     </div>
@@ -153,19 +154,19 @@
   </div>
 
   <h2>Hintergrundbild (Tal) <button type="button" class="info-btn" data-info-toggle="bg-image-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></h2>
-  <p class="hint info-popover" id="bg-image-hint" hidden>Dasselbe Bild für den App-Hintergrund (jede Seite) und das Marken-Feld auf dem Etikett. Das eingebaute Bild bleibt als Standard erhalten - hier kannst du es optional durch ein eigenes ersetzen. Am besten ein breites Querformat (das eingebaute Bild: 1712×624px, ca. 2,7:1).</p>
+  <p class="hint info-popover" id="bg-image-hint" hidden>Das Standard-Bild gilt für den App-Hintergrund (jede Seite) und das Marken-Feld auf dem Etikett; pro Sud lässt sich für das Etikett im Etikett-Dialog ein anderes wählen. Das eingebaute Bild bleibt als Standard erhalten - hier kannst du es optional durch ein eigenes ersetzen. Am besten ein breites Querformat (das eingebaute Bild: 1712×624px, ca. 2,7:1).</p>
   <form method="post" action="/settings/background-images" enctype="multipart/form-data" class="inline-form">
     <input type="file" name="file" accept="image/*" required>
-    <button class="btn btn-primary" type="submit">Hochladen &amp; verwenden</button>
+    <button class="btn btn-primary" type="submit">Hochladen</button>
   </form>
   <div class="logo-gallery">
     <div class="logo-gallery-item {{ 'active' if not s.active_background_image_id }}">
       <img src="/static/img/bg-valley.png" alt="Standard-Hintergrund">
       {% if not s.active_background_image_id %}
-      <span class="badge-active">Aktiv</span>
+      <span class="badge-active">Standard</span>
       {% else %}
       <form method="post" action="/settings/background-images/reset">
-        <button class="btn btn-small" type="submit">Verwenden</button>
+        <button class="btn btn-small" type="submit">Als Standard</button>
       </form>
       {% endif %}
     </div>
@@ -173,10 +174,10 @@
     <div class="logo-gallery-item {{ 'active' if s.active_background_image_id == image.id }}">
       <img src="/background-images/{{ image.filename }}" alt="{{ image.original_filename }}">
       {% if s.active_background_image_id == image.id %}
-      <span class="badge-active">Aktiv</span>
+      <span class="badge-active">Standard</span>
       {% else %}
       <form method="post" action="/settings/background-images/{{ image.id }}/activate">
-        <button class="btn btn-small" type="submit">Verwenden</button>
+        <button class="btn btn-small" type="submit">Als Standard</button>
       </form>
       {% endif %}
     </div>

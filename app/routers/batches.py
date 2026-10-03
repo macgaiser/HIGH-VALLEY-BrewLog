@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, timedelta
 from urllib.parse import quote
 
@@ -10,6 +11,7 @@ from app.beerxml import BeerXmlParseError, build_recipe_xml, create_batch_from_r
 from app.database import get_session
 from app.inventory import sync_batch_deductions
 from app.models import (
+    BackgroundImage,
     Batch,
     BatchComment,
     BeerStyle,
@@ -679,6 +681,79 @@ def batch_export_beerxml(batch_id: int, session: Session = Depends(get_session))
     )
 
 
+_LABEL_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _selected_choice(stored: int | None, known: dict) -> str:
+    """Wert fuer die Auswahl im Etikett-Dialog: "default" (Standard aus den
+    Einstellungen), "0" (eingebaut/keins) oder die ID des gewaehlten Bildes.
+    Eine inzwischen nicht mehr vorhandene ID faellt auf "default" zurueck."""
+    if stored is None:
+        return "default"
+    if stored == 0:
+        return "0"
+    return str(stored) if stored in known else "default"
+
+
+def _parse_label_choice(raw: str | None, known_ids: set[int]) -> int | None:
+    raw = (raw or "default").strip()
+    if raw == "0":
+        return 0
+    if raw.isdigit() and int(raw) in known_ids:
+        return int(raw)
+    return None
+
+
+@router.post("/{batch_id}/label")
+async def batch_label_save(batch_id: int, request: Request, session: Session = Depends(get_session)):
+    """Speichert die Etikett-Auswahl (Logo, Rahmengrafik, Hintergrundbild,
+    Akzentfarben, dunkler Hintergrund) dauerhaft fuer diesen Sud. Eine Farbe,
+    die dem aktuellen Standard aus den Einstellungen entspricht, wird als
+    "Standard folgen" (None) gespeichert."""
+    batch = session.get(Batch, batch_id)
+    if not batch:
+        return RedirectResponse("/batches", status_code=303)
+    settings = session.get(Settings, 1)
+    form = await request.form()
+
+    batch.label_logo_id = _parse_label_choice(form.get("logo"), {l.id for l in session.exec(select(Logo)).all()})
+    batch.label_border_graphic_id = _parse_label_choice(
+        form.get("border_graphic"), {g.id for g in session.exec(select(BorderGraphic)).all()}
+    )
+    batch.label_background_image_id = _parse_label_choice(
+        form.get("background"), {b.id for b in session.exec(select(BackgroundImage)).all()}
+    )
+
+    def _color(raw: str | None, default: str) -> str | None:
+        raw = (raw or "").strip().lower()
+        if not _LABEL_HEX_RE.match(raw) or raw == default.lower():
+            return None
+        return raw
+
+    batch.label_accent_light = _color(form.get("accent_light"), settings.label_accent_light)
+    batch.label_accent_dark = _color(form.get("accent_dark"), settings.label_accent_dark)
+    batch.label_dark = form.get("dark") == "on"
+
+    session.add(batch)
+    session.commit()
+    return RedirectResponse(f"/batches/{batch_id}/label", status_code=303)
+
+
+@router.post("/{batch_id}/label/reset")
+def batch_label_reset(batch_id: int, session: Session = Depends(get_session)):
+    batch = session.get(Batch, batch_id)
+    if batch:
+        batch.label_logo_id = None
+        batch.label_border_graphic_id = None
+        batch.label_background_image_id = None
+        batch.label_accent_light = None
+        batch.label_accent_dark = None
+        batch.label_dark = False
+        session.add(batch)
+        session.commit()
+    return RedirectResponse(f"/batches/{batch_id}/label", status_code=303)
+
+
 @router.get("/{batch_id}/label")
 def batch_label(batch_id: int, request: Request, session: Session = Depends(get_session)):
     batch = session.get(Batch, batch_id)
@@ -707,23 +782,39 @@ def batch_label(batch_id: int, request: Request, session: Session = Depends(get_
     else:
         hop_names_size = 4
 
-    logo_url = "/static/img/logo-shield.png"
-    logo_scale = settings.default_logo_scale
-    if settings.active_logo_id:
-        logo = session.get(Logo, settings.active_logo_id)
-        if logo:
-            logo_url = f"/logos/{logo.filename}"
-            logo_scale = logo.scale_percent
+    logos = session.exec(select(Logo).order_by(Logo.uploaded_at.desc())).all()
+    border_graphics = session.exec(select(BorderGraphic).order_by(BorderGraphic.uploaded_at.desc())).all()
+    background_images = session.exec(select(BackgroundImage).order_by(BackgroundImage.uploaded_at.desc())).all()
+    logos_by_id = {l.id: l for l in logos}
+    graphics_by_id = {g.id: g for g in border_graphics}
+    backgrounds_by_id = {b.id: b for b in background_images}
+
+    # Je Sud gewaehlte Grafik, sonst der Standard aus den Einstellungen
+    # (None = Standard folgen, 0 = bewusst eingebaut/keins, siehe Batch.label_*).
+    logo_id = batch.label_logo_id if batch.label_logo_id is not None else settings.active_logo_id
+    logo = logos_by_id.get(logo_id) if logo_id else None
+    logo_url = f"/logos/{logo.filename}" if logo else "/static/img/logo-shield.png"
+    logo_scale = logo.scale_percent if logo else settings.default_logo_scale
 
     # Keine eingebaute Standardgrafik (frueher eine Hopfenranke) - die war
     # lizenzpflichtig und darf im oeffentlich verfuegbaren Code nicht mit
     # ausgeliefert werden. Ohne eigenen Upload unter Einstellungen bleibt
     # der Rahmen oben/unten schlicht leer.
-    border_graphic_url = None
-    if settings.active_border_graphic_id:
-        graphic = session.get(BorderGraphic, settings.active_border_graphic_id)
-        if graphic:
-            border_graphic_url = f"/border-graphics/{graphic.filename}"
+    graphic_id = batch.label_border_graphic_id if batch.label_border_graphic_id is not None else settings.active_border_graphic_id
+    graphic = graphics_by_id.get(graphic_id) if graphic_id else None
+    border_graphic_url = f"/border-graphics/{graphic.filename}" if graphic else None
+
+    background_id = (
+        batch.label_background_image_id if batch.label_background_image_id is not None else settings.active_background_image_id
+    )
+    background = backgrounds_by_id.get(background_id) if background_id else None
+    background_url = f"/background-images/{background.filename}" if background else "/static/img/bg-valley.png"
+
+    default_logo = logos_by_id.get(settings.active_logo_id) if settings.active_logo_id else None
+    default_graphic = graphics_by_id.get(settings.active_border_graphic_id) if settings.active_border_graphic_id else None
+    default_background = (
+        backgrounds_by_id.get(settings.active_background_image_id) if settings.active_background_image_id else None
+    )
 
     return templates.TemplateResponse(
         "label.html",
@@ -741,8 +832,20 @@ def batch_label(batch_id: int, request: Request, session: Session = Depends(get_
             "logo_url": logo_url,
             "logo_scale": logo_scale,
             "border_graphic_url": border_graphic_url,
-            "label_accent_light": settings.label_accent_light,
-            "label_accent_dark": settings.label_accent_dark,
+            "background_url": background_url,
+            "label_accent_light": batch.label_accent_light or settings.label_accent_light,
+            "label_accent_dark": batch.label_accent_dark or settings.label_accent_dark,
+            "logos": logos,
+            "border_graphics": border_graphics,
+            "background_images": background_images,
+            "default_logo_url": f"/logos/{default_logo.filename}" if default_logo else "/static/img/logo-shield.png",
+            "default_border_graphic_url": f"/border-graphics/{default_graphic.filename}" if default_graphic else None,
+            "default_background_url": (
+                f"/background-images/{default_background.filename}" if default_background else "/static/img/bg-valley.png"
+            ),
+            "selected_logo": _selected_choice(batch.label_logo_id, logos_by_id),
+            "selected_border_graphic": _selected_choice(batch.label_border_graphic_id, graphics_by_id),
+            "selected_background": _selected_choice(batch.label_background_image_id, backgrounds_by_id),
         },
         # Ohne das hier landet nach einem Logo-Wechsel in den Einstellungen
         # (oder ueber die Browser-Historie/das Back-Forward-Cache) leicht
