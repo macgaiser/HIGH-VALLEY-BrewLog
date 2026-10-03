@@ -135,9 +135,9 @@ async def settings_import_beerxml(request: Request, session: Session = Depends(g
 @router.post("/logos")
 async def settings_logo_upload(session: Session = Depends(get_session), file: UploadFile = File(...)):
     """Neues Logo hochladen - wird auf Platte unter DATA_DIR/logos abgelegt
-    (persistiert ueber das Docker-Volume) und direkt als aktives Logo fuer
-    den Etikettengenerator gesetzt. Bereits hochgeladene Logos bleiben in
-    der Galerie und koennen jederzeit wieder aktiviert werden."""
+    (persistiert ueber das Docker-Volume) und erscheint in der Galerie. Als
+    Standard fuer alle Sude wird es erst per "Als Standard" gesetzt; je Sud
+    laesst es sich im Etikett-Dialog auswaehlen."""
     if not file.filename:
         return RedirectResponse("/settings", status_code=303)
     ext = Path(file.filename).suffix.lower()
@@ -149,10 +149,6 @@ async def settings_logo_upload(session: Session = Depends(get_session), file: Up
 
     logo = Logo(filename=stored_name, original_filename=file.filename)
     session.add(logo)
-    session.flush()
-    s = session.get(Settings, 1)
-    s.active_logo_id = logo.id
-    session.add(s)
     session.commit()
     return RedirectResponse("/settings", status_code=303)
 
@@ -207,7 +203,8 @@ async def settings_border_graphic_upload(session: Session = Depends(get_session)
     """Neue Rahmengrafik hochladen (Ersatz fuer die frueher eingebaute,
     lizenzpflichtige Hopfenranke - die App liefert dafuer bewusst keine
     eigene Standardgrafik mehr mit). Wird auf Platte unter
-    DATA_DIR/border_graphics abgelegt und direkt aktiv gesetzt. Skaliert
+    DATA_DIR/border_graphics abgelegt und steht dann in der Galerie/im
+    Etikett-Dialog zur Auswahl (Standard erst per "Als Standard"). Skaliert
     sich auf dem Etikett automatisch ueber die volle Breite, Hoehe je nach
     Seitenverhaeltnis der Datei - am besten passt ein sehr breites,
     niedriges Bild (die eingebaute Hopfenranke war z.B. 583x86px, ca. 6.8:1)
@@ -223,10 +220,6 @@ async def settings_border_graphic_upload(session: Session = Depends(get_session)
 
     graphic = BorderGraphic(filename=stored_name, original_filename=file.filename)
     session.add(graphic)
-    session.flush()
-    s = session.get(Settings, 1)
-    s.active_border_graphic_id = graphic.id
-    session.add(s)
     session.commit()
     return RedirectResponse("/settings", status_code=303)
 
@@ -257,7 +250,8 @@ async def settings_background_image_upload(session: Session = Depends(get_sessio
     bg-valley.png sowohl im App-Hintergrund als auch im Marken-Feld des
     Etiketts (dieselbe Datei fuer beide, siehe background_image_url() in
     templating.py). Anders als bei der Rahmengrafik bleibt das eingebaute
-    Bild als Standard erhalten und wird nur bei aktivem Wunsch ersetzt."""
+    Bild als Standard erhalten und wird nur ersetzt, wenn ein hochgeladenes
+    Bild per "Als Standard" gesetzt wird."""
     if not file.filename:
         return RedirectResponse("/settings", status_code=303)
     ext = Path(file.filename).suffix.lower()
@@ -269,10 +263,6 @@ async def settings_background_image_upload(session: Session = Depends(get_sessio
 
     image = BackgroundImage(filename=stored_name, original_filename=file.filename)
     session.add(image)
-    session.flush()
-    s = session.get(Settings, 1)
-    s.active_background_image_id = image.id
-    session.add(s)
     session.commit()
     return RedirectResponse("/settings", status_code=303)
 

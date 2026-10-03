@@ -202,6 +202,17 @@ class Batch(SQLModel, table=True):
     frozen_total_cost: Optional[float] = None
     frozen_cost_is_incomplete: Optional[bool] = None
 
+    # Etikett-Auswahl je Sud (siehe /batches/{id}/label). None = der in den
+    # Einstellungen definierte Standard gilt (und folgt kuenftigen Aenderungen
+    # daran); 0 = bewusst das eingebaute Logo/Hintergrundbild bzw. keine
+    # Rahmengrafik; sonst die ID des gewaehlten hochgeladenen Bildes.
+    label_logo_id: Optional[int] = None
+    label_border_graphic_id: Optional[int] = None
+    label_background_image_id: Optional[int] = None
+    label_accent_light: Optional[str] = None
+    label_accent_dark: Optional[str] = None
+    label_dark: bool = False
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

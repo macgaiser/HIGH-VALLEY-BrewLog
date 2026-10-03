@@ -1,21 +1,71 @@
 {% extends "base.html" %}
 {% block title %}Etikett – Sud #{{ batch.batch_number }} – HIGH VALLEY BrewLog{% endblock %}
 {% block content %}
+{% macro pick(name, selected, standard_url, standard_hint, zero_label, zero_url, items, url_prefix) %}
+<div class="logo-gallery">
+  <label class="logo-gallery-item label-pick">
+    <input type="radio" name="{{ name }}" value="default" {% if selected == "default" %}checked{% endif %}>
+    {% if standard_url %}<img src="{{ standard_url }}" alt="">{% else %}<span class="hint label-pick-empty">Kein Bild</span>{% endif %}
+    <span class="label-pick-caption">Standard<br><small>{{ standard_hint }}</small></span>
+  </label>
+  <label class="logo-gallery-item label-pick">
+    <input type="radio" name="{{ name }}" value="0" {% if selected == "0" %}checked{% endif %}>
+    {% if zero_url %}<img src="{{ zero_url }}" alt="">{% else %}<span class="hint label-pick-empty">Kein Bild</span>{% endif %}
+    <span class="label-pick-caption">{{ zero_label }}</span>
+  </label>
+  {% for item in items %}
+  <label class="logo-gallery-item label-pick">
+    <input type="radio" name="{{ name }}" value="{{ item.id }}" {% if selected == item.id|string %}checked{% endif %}>
+    <img src="{{ url_prefix }}{{ item.filename }}" alt="{{ item.original_filename }}">
+    <span class="label-pick-caption">{{ item.original_filename|truncate(18, True) }}</span>
+  </label>
+  {% endfor %}
+</div>
+{% endmacro %}
+
 <div class="page-header no-print">
   <h1>Etikett drucken – Sud #{{ batch.batch_number }}</h1>
   <div class="actions">
-    <label class="label-theme-toggle">
-      <input type="checkbox" id="label-dark-toggle">
-      Dunkler Hintergrund (z.B. für Stout)
-    </label>
     <button class="btn btn-primary" type="button" onclick="window.print()">Drucken</button>
     <a class="btn" href="/batches/{{ batch.id }}">Zurück</a>
   </div>
 </div>
 <p class="subtitle no-print">Vorschau für ein A4-Blatt mit 10 übereinander angeordneten Wickel-Etiketten. Ausschneiden entlang der gestrichelten Linien, dann zu einem Ring zusammenkleben. Zum Drucken oder als PDF speichern den Button oben nutzen (Browser-Druckdialog).</p>
 
+<form class="card no-print label-options" id="label-options-form" method="post" action="/batches/{{ batch.id }}/label">
+  <h2>Gestaltung für diesen Sud</h2>
+  <p class="hint">Jede Änderung wird sofort für diesen Sud gespeichert. „Standard“ übernimmt die Auswahl aus den Einstellungen (dort lassen sich auch neue Grafiken hochladen, Größe und Markenname festlegen).</p>
+
+  <h3>Logo</h3>
+  {{ pick("logo", selected_logo, default_logo_url, "aus Einstellungen", "Eingebautes Logo", "/static/img/logo-shield.png", logos, "/logos/") }}
+
+  <h3>Rahmengrafik (Ranke)</h3>
+  {{ pick("border_graphic", selected_border_graphic, default_border_graphic_url, "aus Einstellungen", "Kein Bild", none, border_graphics, "/border-graphics/") }}
+
+  <h3>Hintergrundbild (Tal)</h3>
+  {{ pick("background", selected_background, default_background_url, "aus Einstellungen", "Eingebautes Bild", "/static/img/bg-valley.png", background_images, "/background-images/") }}
+
+  <h3>Farben</h3>
+  <div class="color-field-row">
+    <label for="accent_light">Akzentfarbe helles Etikett</label>
+    <input type="color" id="accent_light" name="accent_light" value="{{ label_accent_light }}">
+  </div>
+  <div class="color-field-row">
+    <label for="accent_dark">Akzentfarbe dunkles Etikett</label>
+    <input type="color" id="accent_dark" name="accent_dark" value="{{ label_accent_dark }}">
+  </div>
+  <label class="label-theme-toggle">
+    <input type="checkbox" name="dark" {% if batch.label_dark %}checked{% endif %}>
+    Dunkler Hintergrund (z.B. für Stout)
+  </label>
+
+  <div class="form-actions">
+    <button class="btn" type="submit" formaction="/batches/{{ batch.id }}/label/reset">Auf Standard zurücksetzen</button>
+  </div>
+</form>
+
 <div class="label-sheet-scale-wrap" id="label-sheet-scale-wrap">
-<div class="label-sheet" id="label-sheet" style="--label-accent-light: {{ label_accent_light }}; --label-accent-dark: {{ label_accent_dark }};">
+<div class="label-sheet{% if batch.label_dark %} label-sheet--dark{% endif %}" id="label-sheet" style="--label-accent-light: {{ label_accent_light }}; --label-accent-dark: {{ label_accent_dark }}; --bg-valley-url: url('{{ background_url }}');">
   {% for _ in label_count %}
   <div class="label-strip">
     <div class="label-cell label-left-square"><img class="label-logo-img" src="{{ logo_url }}" style="width: {{ logo_scale }}%; height: {{ logo_scale }}%;" alt=""></div>
@@ -80,8 +130,10 @@
 {% endblock %}
 {% block scripts %}
 <script>
-  document.getElementById('label-dark-toggle').addEventListener('change', function (e) {
-    document.getElementById('label-sheet').classList.toggle('label-sheet--dark', e.target.checked);
+  // Auswahl wird sofort pro Sud gespeichert; die Seite laedt danach mit
+  // der neuen Vorschau neu.
+  document.getElementById('label-options-form').addEventListener('change', function (e) {
+    e.currentTarget.submit();
   });
 
   // Bildschirmvorschau: .label-sheet hat eine feste Referenzbreite
