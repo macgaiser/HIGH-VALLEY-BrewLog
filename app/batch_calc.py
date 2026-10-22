@@ -72,6 +72,14 @@ class BatchMetrics:
     cost_is_incomplete: bool = False
 
 
+def grain_color_ebc(g) -> float | None:
+    """Malzfarbe (EBC) einer Schuettungsposition: Eigenfarbe des verknuepften
+    Lagerartikels, sonst der manuell an der Position eingetragene Wert."""
+    if g.inventory_item:
+        return g.inventory_item.color_ebc or None
+    return g.color_ebc or None
+
+
 def resolve_color_hex(batch: Batch) -> str | None:
     """Bierfarbe eines Suds als #rrggbb-Hex, fuer die Sude-Uebersicht - eine
     schlanke Kurzform der Farb-Ermittlung aus compute_metrics(), ohne die
@@ -81,9 +89,9 @@ def resolve_color_hex(batch: Batch) -> str | None:
     if (
         batch.target_volume_l
         and batch.grain_additions
-        and all(g.inventory_item and g.inventory_item.color_ebc for g in batch.grain_additions)
+        and all(grain_color_ebc(g) for g in batch.grain_additions)
     ):
-        grain_colors = [(g.amount_kg or 0, g.inventory_item.color_ebc) for g in batch.grain_additions]
+        grain_colors = [(g.amount_kg or 0, grain_color_ebc(g)) for g in batch.grain_additions]
         color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)
     if not color_ebc and batch.color_ebc:
         color_ebc = batch.color_ebc
@@ -170,14 +178,14 @@ def compute_metrics(batch: Batch, settings: Settings) -> BatchMetrics:
         )
 
     # Bierfarbe: nur berechenbar, wenn jede Schüttungsposition mit einem
-    # Malz-Lagerartikel verknüpft ist, an dem eine Eigenfarbe (EBC) hinterlegt
-    # wurde - sonst würde eine fehlende Position die Farbe unterschätzen.
+    # Malzfarbe (EBC) hat - aus dem Lagerartikel oder manuell an der Position
+    # eingetragen - sonst würde eine fehlende Position die Farbe unterschätzen.
     if (
         batch.target_volume_l
         and batch.grain_additions
-        and all(g.inventory_item and g.inventory_item.color_ebc for g in batch.grain_additions)
+        and all(grain_color_ebc(g) for g in batch.grain_additions)
     ):
-        grain_colors = [(g.amount_kg or 0, g.inventory_item.color_ebc) for g in batch.grain_additions]
+        grain_colors = [(g.amount_kg or 0, grain_color_ebc(g)) for g in batch.grain_additions]
         m.color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)
 
     if not m.color_ebc and batch.color_ebc:

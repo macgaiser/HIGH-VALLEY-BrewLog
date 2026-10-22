@@ -24,7 +24,7 @@ from datetime import date, timedelta
 from sqlmodel import Session, select
 
 from app import formulas
-from app.batch_calc import compute_metrics
+from app.batch_calc import compute_metrics, grain_color_ebc
 from app.models import Batch, InventoryCategory, InventoryItem, Settings
 
 MONTH_NAMES_DE = [
@@ -229,9 +229,9 @@ def _resolve_batch_color(batch: Batch) -> tuple[float, str] | None:
     if (
         batch.target_volume_l
         and batch.grain_additions
-        and all(g.inventory_item and g.inventory_item.color_ebc for g in batch.grain_additions)
+        and all(grain_color_ebc(g) for g in batch.grain_additions)
     ):
-        grain_colors = [(g.amount_kg or 0, g.inventory_item.color_ebc) for g in batch.grain_additions]
+        grain_colors = [(g.amount_kg or 0, grain_color_ebc(g)) for g in batch.grain_additions]
         color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)
     if not color_ebc and batch.color_ebc:
         color_ebc = batch.color_ebc

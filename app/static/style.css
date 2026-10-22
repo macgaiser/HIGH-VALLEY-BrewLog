@@ -1281,6 +1281,11 @@ form.card label.field-checkbox input[type="checkbox"] {
 
 .form-table input, .form-table select { padding: 0.35rem; border: 1px solid var(--border); border-radius: 5px; width: 100%; }
 .form-table td { padding: 0.3rem; }
+/* Live-Summen unter den Bereichen des Sud-Formulars. */
+.form-sums { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--muted); }
+.form-sums:empty { display: none; }
+.form-sum strong { color: var(--text); }
+.form-table input[readonly] { background: #f1ede2; color: var(--muted); }
 .form-table th { text-align: left; font-size: 0.8rem; color: var(--muted); padding: 0.3rem; }
 
 .section-title-row { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; }

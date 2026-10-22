@@ -19,7 +19,7 @@ from xml.dom import minidom
 
 from sqlmodel import Session, select
 
-from app.batch_calc import BatchMetrics
+from app.batch_calc import BatchMetrics, grain_color_ebc
 from app.formulas import sg_to_plato
 from app.models import (
     Batch,
@@ -99,7 +99,7 @@ def build_recipe_xml(batch: Batch, settings: Settings, metrics: BatchMetrics) ->
         _sub(el, "AMOUNT", round(g.amount_kg or 0, 3))
         _sub(el, "TYPE", "Grain")
         _sub(el, "YIELD", 75)
-        ebc = g.inventory_item.color_ebc if (g.inventory_item and g.inventory_item.color_ebc) else None
+        ebc = grain_color_ebc(g)
         _sub(el, "COLOR", _ebc_to_srm(ebc) if ebc else 0)
 
     hops = ET.SubElement(recipe, "HOPS")
