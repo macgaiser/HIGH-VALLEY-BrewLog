@@ -256,6 +256,10 @@ class GrainAddition(SQLModel, table=True):
     malt_name: str
     amount_kg: float = 0
     inventory_item_id: Optional[int] = Field(default=None, foreign_key="inventoryitem.id")
+    # Manuell erfasste Malzfarbe (EBC) fuer Positionen ohne Lagerartikel -
+    # bei verknuepftem Lagerartikel gilt dessen Eigenfarbe (siehe
+    # batch_calc.grain_color_ebc).
+    color_ebc: Optional[float] = None
 
     batch: Batch = Relationship(back_populates="grain_additions")
     inventory_item: Optional["InventoryItem"] = Relationship()

@@ -6,12 +6,12 @@
 <select name="{{ row_name }}" {% if list_name=='malz' %}data-grain-select{% endif %}>
   <option value="">– kein Lagerartikel –</option>
   {% for opt in options %}
-  <option value="{{ opt.id }}" data-ebc="{{ opt.color_ebc if opt.color_ebc is not none else '' }}" data-alpha="{{ opt.spec if opt.spec else '' }}" {% if selected_id==opt.id %}selected{% endif %}>{{ opt.name }} ({{ opt.amount|round(2) }} {{ opt.unit }})</option>
+  <option value="{{ opt.id }}" data-ebc="{{ opt.color_ebc if opt.color_ebc is not none else '' }}" data-alpha="{{ opt.spec if opt.spec else '' }}" {% if selected_id==opt.id %}selected{% endif %}>{{ opt.name }} ({{ opt.amount|round(2) }} {{ opt.unit }}){% if list_name=='malz' %} – {% if opt.color_ebc %}{{ opt.color_ebc|fmt(1) }} EBC{% else %}kein EBC{% endif %}{% endif %}</option>
   {% endfor %}
   {% if misc_options %}
   <optgroup label="Sonstige Zutaten">
     {% for opt in misc_options %}
-    <option value="{{ opt.id }}" {% if selected_id==opt.id %}selected{% endif %}>{{ opt.name }} ({{ opt.amount|round(2) }} {{ opt.unit }})</option>
+    <option value="{{ opt.id }}" data-misc="1" {% if selected_id==opt.id %}selected{% endif %}>{{ opt.name }} ({{ opt.amount|round(2) }} {{ opt.unit }})</option>
     {% endfor %}
   </optgroup>
   {% endif %}
@@ -66,9 +66,9 @@
     <div class="field-row" style="margin-top: 0.8rem;">
       <div><label>Ausschlagwürze (l)</label><input type="number" step="0.1" name="target_volume_l" value="{{ batch.target_volume_l if batch else '' }}"></div>
       <div>
-        <label>Farbe (EBC) <button type="button" class="info-btn" id="color-ebc-info-btn" data-info-toggle="color-ebc-auto-hint" hidden title="Info anzeigen" aria-label="Info anzeigen">i</button></label>
+        <label>Farbe (EBC) <button type="button" class="info-btn" id="color-ebc-info-btn" data-info-toggle="color-ebc-auto-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></label>
         <input type="number" step="0.1" name="color_ebc" id="color-ebc-input" value="{{ batch.color_ebc if batch else '' }}">
-        <p class="hint info-popover" id="color-ebc-auto-hint" hidden>Wird automatisch aus der Schüttung berechnet (alle Positionen sind mit einem Malz-Lagerartikel mit hinterlegter Eigenfarbe verknüpft) - diese manuelle Eingabe wird dafür nicht verwendet.</p>
+        <p class="hint info-popover" id="color-ebc-auto-hint" hidden>Die App berechnet die Farbe nur, wenn alle Malze der Schüttung einen EBC-Wert haben (aus dem Lagerartikel oder bei Zutaten ohne Lagerartikel in der Spalte "EBC" der Schüttung von Hand eingetragen). Dann wird dieses Feld automatisch gefüllt und lässt sich nicht ändern. Fehlt bei einem Malz der EBC-Wert, kannst du die Bierfarbe hier selbst eintragen.</p>
       </div>
       <div><label>Kochzeit (min)</label><input type="number" step="1" name="boil_time_min" value="{{ batch.boil_time_min if batch else '' }}"></div>
       <div>
@@ -113,13 +113,15 @@
     <div class="section-title-row"><h2><span>Schüttung</span><img class="step-icon" src="/static/img/step-schroten.png" alt=""></h2><button class="btn btn-small" data-add-row="grain">+ Zeile</button></div>
     <div class="table-scroll">
     <table class="form-table">
-      <thead><tr><th>Lagerartikel</th><th>Alternative (nicht im Lager)</th><th>Menge (kg)</th><th></th></tr></thead>
+      <thead><tr><th>Lagerartikel</th><th>Alternative (nicht im Lager)</th><th>EBC <button type="button" class="info-btn" data-info-toggle="grain-ebc-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></th><th>Menge (kg)</th><th>Farbanteil (EBC)</th><th></th></tr></thead>
       <tbody data-rows="grain">
         {% for g in (batch.grain_additions if batch else []) %}
         <tr>
           <td>{{ inv_select('malz', inventory.malz, g.inventory_item_id, 'grain_inventory_id') }}</td>
           <td><input type="text" name="grain_malt_name" value="{{ '' if g.inventory_item_id else g.malt_name }}"></td>
+          <td><input type="number" step="0.1" min="0" name="grain_color_ebc" value="{{ g.color_ebc if g.color_ebc is not none and not g.inventory_item_id else '' }}" placeholder="EBC"></td>
           <td><input type="number" step="0.01" name="grain_amount_kg" value="{{ g.amount_kg }}"></td>
+          <td><span data-grain-share>–</span></td>
           <td><button class="btn btn-small" data-remove-row>✕</button></td>
         </tr>
         {% endfor %}
@@ -130,10 +132,14 @@
       <tr>
         <td>{{ inv_select('malz', inventory.malz, None, 'grain_inventory_id') }}</td>
         <td><input type="text" name="grain_malt_name"></td>
+        <td><input type="number" step="0.1" min="0" name="grain_color_ebc" placeholder="EBC"></td>
         <td><input type="number" step="0.01" name="grain_amount_kg"></td>
+        <td><span data-grain-share>–</span></td>
         <td><button class="btn btn-small" data-remove-row>✕</button></td>
       </tr>
     </template>
+    <p class="hint info-popover" id="grain-ebc-hint" hidden>Bei einem Lagerartikel gilt dessen hinterlegter EBC-Wert (wird hier angezeigt, nicht änderbar). Bei einer Zutat ohne Lagerartikel trägst du den EBC-Wert des Malzes selbst ein. Nur wenn alle Malze einen EBC-Wert haben, berechnet die App die Bierfarbe. "Farbanteil" zeigt, wie viel EBC der Bierfarbe auf das jeweilige Malz entfällt (nach Menge und EBC; die Summe ergibt die Bierfarbe).</p>
+    <div class="form-sums" data-sums="grain"></div>
   </section>
 
   <section class="card">
@@ -171,6 +177,7 @@
         <td><button class="btn btn-small" data-remove-row>✕</button></td>
       </tr>
     </template>
+    <div class="form-sums" data-sums="mash"></div>
   </section>
 
   <section class="card">
@@ -203,6 +210,7 @@
       </tbody>
     </table>
     </div>
+    <div class="form-sums" data-sums="hop"></div>
     <p class="hint">IBU-Schätzung nach Tinseth, auf Basis der geplanten Stammwürze (Stammdaten) - aktualisiert sich live beim Eintragen der Werte.</p>
     <template data-row-template="hop">
       <tr>
@@ -299,6 +307,7 @@
         <td><button class="btn btn-small" data-remove-row>✕</button></td>
       </tr>
     </template>
+    <div class="form-sums" data-sums="dryhop"></div>
   </section>
 
   <section class="card">
@@ -324,6 +333,7 @@
         <td><button class="btn btn-small" data-remove-row>✕</button></td>
       </tr>
     </template>
+    <div class="form-sums" data-sums="carb"></div>
   </section>
 
   <section class="card">
@@ -348,6 +358,7 @@
       </tbody>
     </table>
     </div>
+    <div class="form-sums" data-sums="task"></div>
     <p class="hint">Beginn/Ende der einzelnen Positionen werden direkt auf der Sud-Detailseite erfasst.</p>
     <template data-row-template="task">
       <tr>

@@ -424,6 +424,7 @@ async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
     names = form.getlist("grain_malt_name")
     amounts = form.getlist("grain_amount_kg")
     inv_ids = form.getlist("grain_inventory_id")
+    ebcs = form.getlist("grain_color_ebc")
     for i in range(len(names)):
         inv_id = int(inv_ids[i]) if i < len(inv_ids) and inv_ids[i] else None
         if not names[i].strip() and not inv_id:
@@ -435,6 +436,8 @@ async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
                 malt_name=_resolve_ingredient_name(session, names[i], inv_id),
                 amount_kg=_f(amounts[i]) or 0,
                 inventory_item_id=inv_id,
+                # Manuelle EBC nur ohne Lagerartikel - sonst gilt dessen Eigenfarbe.
+                color_ebc=None if inv_id else (_f(ebcs[i]) if i < len(ebcs) else None),
             )
         )
 
@@ -946,6 +949,7 @@ def batch_copy(batch_id: int, session: Session = Depends(get_session)):
                 malt_name=g.malt_name,
                 amount_kg=g.amount_kg,
                 inventory_item_id=g.inventory_item_id,
+                color_ebc=g.color_ebc,
             )
         )
     for s in source.mash_steps:

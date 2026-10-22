@@ -76,7 +76,10 @@ function tinsethIbu(weightG, alphaPercent, boilTimeMin, batchVolumeL, ogPlato) {
 }
 function updateIbuPreviews() {
   const rows = document.querySelectorAll('tbody[data-rows="hop"] tr');
-  if (!rows.length) return;
+  if (!rows.length) {
+    updateHopSums();
+    return;
+  }
   const batchVolumeL = parseFloat(document.querySelector('input[name="target_volume_l"]')?.value);
   const ogPlato = parseFloat(document.querySelector('input[name="target_og_plato"]')?.value);
   rows.forEach((row) => {
@@ -86,8 +89,10 @@ function updateIbuPreviews() {
     const alphaPercent = parseFloat(row.querySelector('input[name="hop_alpha"]')?.value);
     const boilTimeMin = parseFloat(row.querySelector('input[name="hop_time_min"]')?.value) || 0;
     const ibu = tinsethIbu(weightG, alphaPercent, boilTimeMin, batchVolumeL, ogPlato);
-    preview.textContent = ibu === null ? "–" : ibu.toFixed(1);
+    preview.dataset.ibu = ibu === null ? "" : String(ibu);
+    preview.textContent = ibu === null ? "–" : fmtNum(ibu, 1);
   });
+  updateHopSums();
 }
 document.addEventListener("input", (event) => {
   if (
@@ -98,7 +103,6 @@ document.addEventListener("input", (event) => {
     updateIbuPreviews();
   }
 });
-updateIbuPreviews();
 
 // Generische Zeilen-Verwaltung für die dynamischen Tabellen im Sud-Formular.
 // Jede Sektion hat: ein <tbody data-rows="NAME">, ein <template data-row-template="NAME">
@@ -115,8 +119,10 @@ document.addEventListener("click", (event) => {
       const clone = template.content.cloneNode(true);
       tbody.appendChild(clone);
     }
+    updateGrainEbcInputs();
     updateColorEbcAutoState();
     updateIbuPreviews();
+    updateFormSums();
     return;
   }
 
@@ -126,6 +132,7 @@ document.addEventListener("click", (event) => {
     removeBtn.closest("tr").remove();
     updateColorEbcAutoState();
     updateIbuPreviews();
+    updateFormSums();
     return;
   }
 
@@ -194,22 +201,176 @@ updateCompareButton();
 function updateColorEbcAutoState() {
   const input = document.getElementById("color-ebc-input");
   const hint = document.getElementById("color-ebc-auto-hint");
-  const infoBtn = document.getElementById("color-ebc-info-btn");
-  if (!input || !hint || !infoBtn) return;
-  const linked = Array.from(document.querySelectorAll("[data-grain-select]")).map((select) => {
-    if (!select.value) return false;
-    const opt = select.options[select.selectedIndex];
-    return !!(opt && opt.dataset.ebc);
-  });
-  const auto = linked.length > 0 && linked.every(Boolean);
+  if (!input || !hint) return;
+  const rows = activeGrainRows();
+  const auto = rows.length > 0 && rows.every((r) => r.ebc > 0);
   input.readOnly = auto;
-  infoBtn.hidden = !auto;
-  if (!auto) hint.hidden = true; // Info-Button verschwindet -> Text mit zuklappen
 }
 document.addEventListener("change", (event) => {
-  if (event.target.closest("[data-grain-select]")) updateColorEbcAutoState();
+  if (event.target.closest("[data-grain-select]")) {
+    updateGrainEbcInputs();
+    updateColorEbcAutoState();
+    updateFormSums();
+  }
 });
+document.addEventListener("input", (event) => {
+  if (event.target.matches('input[name="grain_color_ebc"]')) updateColorEbcAutoState();
+});
+
+// Live-Summen unter den Bereichen des Sud-Formulars (Schüttung, Maischplan,
+// Hopfen, Stopfhopfen, Karbonisierung, Zeitplan) - werden bei jeder Eingabe
+// neu berechnet, ohne zu speichern.
+function fmtNum(n, decimals) {
+  return n.toLocaleString("de-DE", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function fmtMinutes(min) {
+  if (min < 60) return `${fmtNum(min, 0)} min`;
+  const h = Math.floor(min / 60);
+  const m = Math.round(min - h * 60);
+  return `${h} h ${m} min`;
+}
+function numVal(row, name) {
+  const v = parseFloat(row.querySelector(`input[name="${name}"]`)?.value);
+  return Number.isFinite(v) ? v : 0;
+}
+function setSums(name, items) {
+  const el = document.querySelector(`[data-sums="${name}"]`);
+  if (!el) return;
+  el.textContent = "";
+  items.forEach(([label, value]) => {
+    const span = document.createElement("span");
+    span.className = "form-sum";
+    span.append(`${label}: `);
+    const strong = document.createElement("strong");
+    strong.textContent = value;
+    span.append(strong);
+    el.append(span);
+  });
+}
+
+// Schüttungszeilen, die tatsächlich etwas enthalten (die serverseitige
+// Speicherung überspringt Zeilen ohne Lagerartikel und Namen ebenfalls).
+function activeGrainRows() {
+  const result = [];
+  document.querySelectorAll('tbody[data-rows="grain"] tr').forEach((row) => {
+    const select = row.querySelector("[data-grain-select]");
+    const name = row.querySelector('input[name="grain_malt_name"]')?.value.trim();
+    if (!select?.value && !name) return;
+    let ebc = 0;
+    if (select?.value) {
+      ebc = parseFloat(select.options[select.selectedIndex]?.dataset.ebc) || 0;
+    } else {
+      ebc = numVal(row, "grain_color_ebc");
+    }
+    result.push({ row, kg: numVal(row, "grain_amount_kg"), ebc });
+  });
+  return result;
+}
+
+// EBC-Feld je Schüttungszeile: bei Lagerartikel dessen Eigenfarbe
+// (schreibgeschützt), sonst frei eintragbar - ein zuvor von Hand
+// eingetragener Wert bleibt beim Zwischenwechsel erhalten.
+function updateGrainEbcInputs() {
+  document.querySelectorAll('tbody[data-rows="grain"] tr').forEach((row) => {
+    const select = row.querySelector("[data-grain-select]");
+    const input = row.querySelector('input[name="grain_color_ebc"]');
+    if (!select || !input) return;
+    if (select.value) {
+      if (!input.readOnly) input.dataset.manual = input.value;
+      const ebc = select.options[select.selectedIndex]?.dataset.ebc;
+      input.value = ebc ? ebc : "";
+      input.placeholder = "kein EBC";
+      input.readOnly = true;
+    } else if (input.readOnly) {
+      input.value = input.dataset.manual || "";
+      input.placeholder = "EBC";
+      input.readOnly = false;
+    }
+  });
+}
+
+function updateGrainSums() {
+  if (!document.querySelector('[data-sums="grain"]')) return;
+  const rows = activeGrainRows();
+  const volume = parseFloat(document.querySelector('input[name="target_volume_l"]')?.value);
+  const totalKg = rows.reduce((sum, r) => sum + r.kg, 0);
+  const allEbc = rows.length > 0 && rows.every((r) => r.ebc > 0);
+  const mcu = (r) => (r.kg > 0 && r.ebc > 0 ? r.kg * (r.ebc / 1.97) * 8.3454 : 0);
+  const mcuTotal = rows.reduce((sum, r) => sum + mcu(r), 0);
+  let beerEbc = null;
+  if (allEbc && volume > 0 && mcuTotal > 0) {
+    beerEbc = Math.round(1.4922 * Math.pow(mcuTotal / volume, 0.6859) * 1.97 * 10) / 10;
+  }
+  document.querySelectorAll("[data-grain-share]").forEach((el) => (el.textContent = "–"));
+  rows.forEach((r) => {
+    const el = r.row.querySelector("[data-grain-share]");
+    if (el && beerEbc !== null) el.textContent = fmtNum((beerEbc * mcu(r)) / mcuTotal, 1);
+  });
+  let colorText = "–";
+  if (beerEbc !== null) colorText = `${fmtNum(beerEbc, 1)} EBC`;
+  else if (rows.length && !allEbc) colorText = "– (EBC fehlt bei mind. einem Malz)";
+  else if (rows.length && !(volume > 0)) colorText = "– (Ausschlagwürze fehlt)";
+  setSums("grain", [
+    ["Menge Malz gesamt", `${fmtNum(totalKg, 2)} kg`],
+    ["Bierfarbe", colorText],
+  ]);
+}
+
+function updateMashSums() {
+  let total = 0;
+  document.querySelectorAll('tbody[data-rows="mash"] tr').forEach((row) => (total += numVal(row, "mash_duration_min")));
+  setSums("mash", [["Rasten gesamt", fmtMinutes(total)]]);
+}
+
+function updateHopSums() {
+  if (!document.querySelector('[data-sums="hop"]')) return;
+  let hopG = 0;
+  let miscG = 0;
+  let ibu = 0;
+  document.querySelectorAll('tbody[data-rows="hop"] tr').forEach((row) => {
+    const select = row.querySelector('select[name="hop_inventory_id"]');
+    const isMisc = !!select?.options[select.selectedIndex]?.dataset.misc;
+    const g = numVal(row, "hop_amount_g");
+    if (isMisc) miscG += g;
+    else hopG += g;
+    ibu += parseFloat(row.querySelector("[data-ibu-preview]")?.dataset.ibu) || 0;
+  });
+  const items = [
+    ["Hopfen gesamt", `${fmtNum(hopG, 1)} g`],
+    ["IBU gesamt", fmtNum(ibu, 1)],
+  ];
+  if (miscG > 0) items.splice(1, 0, ["Sonstige Zutaten gesamt", `${fmtNum(miscG, 1)} g`]);
+  setSums("hop", items);
+}
+
+function updateSimpleSums() {
+  let dryHop = 0;
+  document.querySelectorAll('tbody[data-rows="dryhop"] tr').forEach((row) => (dryHop += numVal(row, "dryhop_amount_g")));
+  setSums("dryhop", [["Stopfhopfen gesamt", `${fmtNum(dryHop, 1)} g`]]);
+  let sugar = 0;
+  document.querySelectorAll('tbody[data-rows="carb"] tr').forEach((row) => (sugar += numVal(row, "carb_sugar_g")));
+  setSums("carb", [["Zucker gesamt", `${fmtNum(sugar, 1)} g`]]);
+  let taskMin = 0;
+  document.querySelectorAll('tbody[data-rows="task"] tr').forEach((row) => (taskMin += numVal(row, "task_duration_min")));
+  setSums("task", [["Dauer gesamt", fmtMinutes(taskMin)]]);
+}
+
+function updateFormSums() {
+  updateGrainSums();
+  updateMashSums();
+  updateHopSums();
+  updateSimpleSums();
+}
+document.addEventListener("input", (event) => {
+  if (event.target.closest("tbody[data-rows], input[name='target_volume_l']")) updateFormSums();
+});
+document.addEventListener("change", (event) => {
+  if (event.target.closest("tbody[data-rows]")) updateFormSums();
+});
+updateGrainEbcInputs();
 updateColorEbcAutoState();
+updateIbuPreviews();
+updateFormSums();
 
 // Datumsfelder zeigen ihr Format sonst je nach Browser-/Systemsprache an
 // (z.B. mm/dd/yyyy) statt einheitlich dd.mm.yyyy - flatpickr übernimmt die
