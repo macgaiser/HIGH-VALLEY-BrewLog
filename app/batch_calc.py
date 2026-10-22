@@ -74,10 +74,11 @@ class BatchMetrics:
 
 def grain_color_ebc(g) -> float | None:
     """Malzfarbe (EBC) einer Schuettungsposition: Eigenfarbe des verknuepften
-    Lagerartikels, sonst der manuell an der Position eingetragene Wert."""
+    Lagerartikels, sonst der manuell an der Position eingetragene Wert.
+    None = nicht hinterlegt; 0 ist ein gueltiger Wert (z.B. Mehl, Zucker)."""
     if g.inventory_item:
-        return g.inventory_item.color_ebc or None
-    return g.color_ebc or None
+        return g.inventory_item.color_ebc
+    return g.color_ebc
 
 
 def resolve_color_hex(batch: Batch) -> str | None:
@@ -89,7 +90,7 @@ def resolve_color_hex(batch: Batch) -> str | None:
     if (
         batch.target_volume_l
         and batch.grain_additions
-        and all(grain_color_ebc(g) for g in batch.grain_additions)
+        and all(grain_color_ebc(g) is not None for g in batch.grain_additions)
     ):
         grain_colors = [(g.amount_kg or 0, grain_color_ebc(g)) for g in batch.grain_additions]
         color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)
@@ -183,7 +184,7 @@ def compute_metrics(batch: Batch, settings: Settings) -> BatchMetrics:
     if (
         batch.target_volume_l
         and batch.grain_additions
-        and all(grain_color_ebc(g) for g in batch.grain_additions)
+        and all(grain_color_ebc(g) is not None for g in batch.grain_additions)
     ):
         grain_colors = [(g.amount_kg or 0, grain_color_ebc(g)) for g in batch.grain_additions]
         m.color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)

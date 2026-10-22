@@ -203,7 +203,7 @@ function updateColorEbcAutoState() {
   const hint = document.getElementById("color-ebc-auto-hint");
   if (!input || !hint) return;
   const rows = activeGrainRows();
-  const auto = rows.length > 0 && rows.every((r) => r.ebc > 0);
+  const auto = rows.length > 0 && rows.every((r) => r.ebc !== null);
   input.readOnly = auto;
 }
 document.addEventListener("change", (event) => {
@@ -256,12 +256,12 @@ function activeGrainRows() {
     const select = row.querySelector("[data-grain-select]");
     const name = row.querySelector('input[name="grain_malt_name"]')?.value.trim();
     if (!select?.value && !name) return;
-    let ebc = 0;
-    if (select?.value) {
-      ebc = parseFloat(select.options[select.selectedIndex]?.dataset.ebc) || 0;
-    } else {
-      ebc = numVal(row, "grain_color_ebc");
-    }
+    // null = kein EBC-Wert hinterlegt/eingetragen; 0 ist ein gültiger Wert.
+    let ebc = null;
+    const raw = select?.value
+      ? select.options[select.selectedIndex]?.dataset.ebc
+      : row.querySelector('input[name="grain_color_ebc"]')?.value;
+    if (raw !== undefined && raw.trim() !== "" && Number.isFinite(parseFloat(raw))) ebc = parseFloat(raw);
     result.push({ row, kg: numVal(row, "grain_amount_kg"), ebc });
   });
   return result;
@@ -278,7 +278,7 @@ function updateGrainEbcInputs() {
     if (select.value) {
       if (!input.readOnly) input.dataset.manual = input.value;
       const ebc = select.options[select.selectedIndex]?.dataset.ebc;
-      input.value = ebc ? ebc : "";
+      input.value = ebc || "";
       input.placeholder = "kein EBC";
       input.readOnly = true;
     } else if (input.readOnly) {
@@ -294,17 +294,17 @@ function updateGrainSums() {
   const rows = activeGrainRows();
   const volume = parseFloat(document.querySelector('input[name="target_volume_l"]')?.value);
   const totalKg = rows.reduce((sum, r) => sum + r.kg, 0);
-  const allEbc = rows.length > 0 && rows.every((r) => r.ebc > 0);
+  const allEbc = rows.length > 0 && rows.every((r) => r.ebc !== null);
   const mcu = (r) => (r.kg > 0 && r.ebc > 0 ? r.kg * (r.ebc / 1.97) * 8.3454 : 0);
   const mcuTotal = rows.reduce((sum, r) => sum + mcu(r), 0);
   let beerEbc = null;
-  if (allEbc && volume > 0 && mcuTotal > 0) {
-    beerEbc = Math.round(1.4922 * Math.pow(mcuTotal / volume, 0.6859) * 1.97 * 10) / 10;
+  if (allEbc && volume > 0) {
+    beerEbc = mcuTotal > 0 ? Math.round(1.4922 * Math.pow(mcuTotal / volume, 0.6859) * 1.97 * 10) / 10 : 0;
   }
   document.querySelectorAll("[data-grain-share]").forEach((el) => (el.textContent = "–"));
   rows.forEach((r) => {
     const el = r.row.querySelector("[data-grain-share]");
-    if (el && beerEbc !== null) el.textContent = fmtNum((beerEbc * mcu(r)) / mcuTotal, 1);
+    if (el && beerEbc !== null) el.textContent = fmtNum(mcuTotal > 0 ? (beerEbc * mcu(r)) / mcuTotal : 0, 1);
   });
   let colorText = "–";
   if (beerEbc !== null) colorText = `${fmtNum(beerEbc, 1)} EBC`;
