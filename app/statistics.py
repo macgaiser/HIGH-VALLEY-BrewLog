@@ -229,7 +229,7 @@ def _resolve_batch_color(batch: Batch) -> tuple[float, str] | None:
     if (
         batch.target_volume_l
         and batch.grain_additions
-        and all(grain_color_ebc(g) for g in batch.grain_additions)
+        and all(grain_color_ebc(g) is not None for g in batch.grain_additions)
     ):
         grain_colors = [(g.amount_kg or 0, grain_color_ebc(g)) for g in batch.grain_additions]
         color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)

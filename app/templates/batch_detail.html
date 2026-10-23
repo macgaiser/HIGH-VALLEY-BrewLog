@@ -72,14 +72,32 @@
 
   <section class="card">
     <h2><span>Schüttung ({{ m.total_grain_kg|fmt }} kg)</span><img class="step-icon" src="/static/img/step-schroten.png" alt=""></h2>
-    <div class="table-scroll">
-    <table class="mini-table">
-      {% for g in batch.grain_additions|sort(attribute="amount_kg", reverse=True) %}
-      <tr><td>{{ g.malt_name }}</td><td>{{ g.amount_kg|fmt }} kg</td></tr>
-      {% else %}
-      <tr><td colspan="2">–</td></tr>
-      {% endfor %}
-    </table>
+    <div class="grain-layout" data-pie-group="grain">
+      <div class="table-scroll grain-table-wrap">
+      <table class="mini-table">
+        {% for g in grain_rows %}
+        <tr data-pie-index="{{ g.number }}">
+          <td class="grain-badge-cell"><span class="grain-badge" style="background: {{ g.color }}; color: {{ g.text_color }};">{{ g.number }}</span></td>
+          <td>{{ g.name }}</td><td>{{ g.kg|fmt }} kg</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">–</td></tr>
+        {% endfor %}
+      </table>
+      </div>
+      {% if grain_rows|selectattr("share_percent")|list %}
+      <div class="grain-pie" aria-label="Anteile der Malze an der Schüttung (nach Menge)">
+        <svg viewBox="0 0 200 200">
+          {% for g in grain_rows if g.share_percent %}
+          <g class="grain-slice" data-pie-index="{{ g.number }}">
+            <title>{{ g.number }}. {{ g.name }}: {{ g.kg|fmt(2) }} kg ({{ g.share_percent|fmt(1) }} %)</title>
+            {% if g.full_circle %}<circle cx="100" cy="100" r="92" fill="{{ g.color }}"/>{% else %}<path d="{{ g.path }}" fill="{{ g.color }}"/>{% endif %}
+            {% if g.label_x is not none %}<text x="{{ g.label_x }}" y="{{ g.label_y }}" text-anchor="middle" dominant-baseline="central" fill="{{ g.text_color }}">{{ g.number }}</text>{% endif %}
+          </g>
+          {% endfor %}
+        </svg>
+      </div>
+      {% endif %}
     </div>
   </section>
 </div>

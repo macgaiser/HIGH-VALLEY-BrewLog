@@ -6,7 +6,14 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from sqlmodel import Session, select
 
-from app.batch_calc import AUTO_LOCK_AGE_DAYS, apply_frozen_cost, auto_lock_cost, compute_metrics, resolve_color_hex
+from app.batch_calc import (
+    AUTO_LOCK_AGE_DAYS,
+    apply_frozen_cost,
+    auto_lock_cost,
+    compute_metrics,
+    grain_pie_rows,
+    resolve_color_hex,
+)
 from app.beerxml import BeerXmlParseError, build_recipe_xml, create_batch_from_recipe, find_inventory_item, parse_recipes_xml
 from app.database import get_session
 from app.inventory import sync_batch_deductions
@@ -619,6 +626,7 @@ def batch_detail(batch_id: int, request: Request, session: Session = Depends(get
             "request": request,
             "batch": batch,
             "m": metrics,
+            "grain_rows": grain_pie_rows(batch) if batch else [],
             "today": date.today().isoformat(),
             "prev_batch": prev_batch,
             "next_batch": next_batch,

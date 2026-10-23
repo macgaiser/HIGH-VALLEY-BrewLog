@@ -30,6 +30,7 @@ abgeleiteten Anzeigewert, kein Risiko fuer echte Bestandsdaten.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -74,10 +75,61 @@ class BatchMetrics:
 
 def grain_color_ebc(g) -> float | None:
     """Malzfarbe (EBC) einer Schuettungsposition: Eigenfarbe des verknuepften
-    Lagerartikels, sonst der manuell an der Position eingetragene Wert."""
+    Lagerartikels, sonst der manuell an der Position eingetragene Wert.
+    None = nicht hinterlegt; 0 ist ein gueltiger Wert (z.B. Mehl, Zucker)."""
     if g.inventory_item:
-        return g.inventory_item.color_ebc or None
-    return g.color_ebc or None
+        return g.inventory_item.color_ebc
+    return g.color_ebc
+
+
+def grain_pie_rows(batch: Batch) -> list[dict]:
+    """Schuettung fuer die Sud-Ansicht: Tabellenzeilen (nach Menge absteigend,
+    mit laufender Nummer) samt Tortenstueck-Geometrie fuer das Inline-SVG
+    (Mittelpunkt 100/100, Radius 92). Farbe = Bierfarbe des Malzes aus
+    seinem EBC-Wert (ohne EBC neutral beige), Stueckgroesse = Mengenanteil."""
+    additions = sorted(batch.grain_additions, key=lambda g: g.amount_kg or 0, reverse=True)
+    total = sum(g.amount_kg or 0 for g in additions if (g.amount_kg or 0) > 0)
+    cx = cy = 100.0
+    radius = 92.0
+    angle = -math.pi / 2
+    rows: list[dict] = []
+    for i, g in enumerate(additions):
+        ebc = grain_color_ebc(g)
+        color = formulas.ebc_to_hex(ebc) if ebc is not None else "#cfc8b8"
+        r, gr, b = (int(color[k : k + 2], 16) for k in (1, 3, 5))
+        row = {
+            "number": i + 1,
+            "name": g.malt_name,
+            "kg": g.amount_kg,
+            "color": color,
+            "text_color": "#2b2015" if 0.299 * r + 0.587 * gr + 0.114 * b > 150 else "#ffffff",
+            "share_percent": None,
+            "full_circle": False,
+            "path": None,
+            "label_x": None,
+            "label_y": None,
+        }
+        kg = g.amount_kg or 0
+        if total > 0 and kg > 0:
+            share = kg / total
+            row["share_percent"] = share * 100
+            if share >= 0.9999:
+                row["full_circle"] = True
+            else:
+                end = angle + share * 2 * math.pi
+                x0, y0 = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
+                x1, y1 = cx + radius * math.cos(end), cy + radius * math.sin(end)
+                row["path"] = (
+                    f"M{cx:.0f},{cy:.0f} L{x0:.2f},{y0:.2f} "
+                    f"A{radius:.0f},{radius:.0f} 0 {1 if share > 0.5 else 0} 1 {x1:.2f},{y1:.2f} Z"
+                )
+            if share >= 0.05:
+                mid = angle + share * math.pi
+                row["label_x"] = round(cx + radius * 0.62 * math.cos(mid), 2)
+                row["label_y"] = round(cy + radius * 0.62 * math.sin(mid), 2)
+            angle += share * 2 * math.pi
+        rows.append(row)
+    return rows
 
 
 def resolve_color_hex(batch: Batch) -> str | None:
@@ -89,7 +141,7 @@ def resolve_color_hex(batch: Batch) -> str | None:
     if (
         batch.target_volume_l
         and batch.grain_additions
-        and all(grain_color_ebc(g) for g in batch.grain_additions)
+        and all(grain_color_ebc(g) is not None for g in batch.grain_additions)
     ):
         grain_colors = [(g.amount_kg or 0, grain_color_ebc(g)) for g in batch.grain_additions]
         color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)
@@ -183,7 +235,7 @@ def compute_metrics(batch: Batch, settings: Settings) -> BatchMetrics:
     if (
         batch.target_volume_l
         and batch.grain_additions
-        and all(grain_color_ebc(g) for g in batch.grain_additions)
+        and all(grain_color_ebc(g) is not None for g in batch.grain_additions)
     ):
         grain_colors = [(g.amount_kg or 0, grain_color_ebc(g)) for g in batch.grain_additions]
         m.color_ebc = formulas.beer_color_ebc(grain_colors, batch.target_volume_l)
