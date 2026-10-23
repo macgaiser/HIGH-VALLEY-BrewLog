@@ -1296,6 +1296,7 @@ form.card label.field-checkbox input[type="checkbox"] {
 .grain-badge-cell { width: 2rem; }
 .grain-layout tr.is-hover { background: rgba(240, 190, 51, 0.18); }
 .form-table input[readonly] { background: #f1ede2; color: var(--muted); }
+.ebc-chip { padding: 0.15rem 0.6rem; border-radius: 999px; border: 1px solid rgba(0, 0, 0, 0.2); }
 .form-table th { text-align: left; font-size: 0.8rem; color: var(--muted); padding: 0.3rem; }
 
 .section-title-row { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; }

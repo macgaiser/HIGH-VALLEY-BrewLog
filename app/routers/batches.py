@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from sqlmodel import Session, select
 
+from app import formulas
 from app.batch_calc import (
     AUTO_LOCK_AGE_DAYS,
     apply_frozen_cost,
@@ -265,6 +266,7 @@ def batch_new_form(request: Request, session: Session = Depends(get_session)):
             "mash_step_names": MASH_STEP_NAMES,
             "inventory": _inventory_options(session),
             "hop_types": list(HopAdditionType),
+            "ebc_color_table": formulas.ebc_color_table(),
             "beer_styles": beer_styles,
             "water_profiles": water_profiles,
         },
@@ -893,6 +895,7 @@ def batch_edit_form(batch_id: int, request: Request, session: Session = Depends(
             "mash_step_names": MASH_STEP_NAMES,
             "inventory": _inventory_options(session),
             "hop_types": list(HopAdditionType),
+            "ebc_color_table": formulas.ebc_color_table(),
             "beer_styles": beer_styles,
             "water_profiles": water_profiles,
             "suggest_inventory_lock": suggest_inventory_lock,

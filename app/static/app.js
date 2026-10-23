@@ -214,7 +214,10 @@ document.addEventListener("change", (event) => {
   }
 });
 document.addEventListener("input", (event) => {
-  if (event.target.matches('input[name="grain_color_ebc"]')) updateColorEbcAutoState();
+  if (event.target.matches('input[name="grain_color_ebc"]')) {
+    colorGrainEbcInput(event.target);
+    updateColorEbcAutoState();
+  }
 });
 
 // Live-Summen unter den Bereichen des Sud-Formulars (Schüttung, Maischplan,
@@ -237,12 +240,17 @@ function setSums(name, items) {
   const el = document.querySelector(`[data-sums="${name}"]`);
   if (!el) return;
   el.textContent = "";
-  items.forEach(([label, value]) => {
+  items.forEach(([label, value, color]) => {
     const span = document.createElement("span");
     span.className = "form-sum";
     span.append(`${label}: `);
     const strong = document.createElement("strong");
     strong.textContent = value;
+    if (color) {
+      strong.className = "ebc-chip";
+      strong.style.background = color;
+      strong.style.color = readableTextColor(color);
+    }
     span.append(strong);
     el.append(span);
   });
@@ -267,6 +275,42 @@ function activeGrainRows() {
   return result;
 }
 
+// Bierfarbe zu einem EBC-Wert (JS-Nachbau von formulas.ebc_to_rgb mit
+// derselben Farbtabelle, lineare Interpolation zwischen den Stützstellen).
+function ebcToHex(ebc) {
+  const table = window.EBC_COLOR_TABLE;
+  if (!table || !table.length) return null;
+  let rgb = table[table.length - 1].slice(1);
+  if (ebc <= table[0][0]) rgb = table[0].slice(1);
+  else if (ebc < table[table.length - 1][0]) {
+    for (let i = 0; i < table.length - 1; i++) {
+      const [e0, r0, g0, b0] = table[i];
+      const [e1, r1, g1, b1] = table[i + 1];
+      if (ebc >= e0 && ebc <= e1) {
+        const t = (ebc - e0) / (e1 - e0);
+        rgb = [r0 + (r1 - r0) * t, g0 + (g1 - g0) * t, b0 + (b1 - b0) * t];
+        break;
+      }
+    }
+  }
+  return "#" + rgb.map((c) => Math.round(c).toString(16).padStart(2, "0")).join("");
+}
+function readableTextColor(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#2b0000" : "#ffffff";
+}
+// EBC-Feld einer Schüttungszeile in der Bierfarbe seines Wertes einfärben
+// (leer/ungültig -> Standarddarstellung).
+function colorGrainEbcInput(input) {
+  const raw = input.value.trim();
+  const ebc = raw === "" ? NaN : parseFloat(raw);
+  const hex = Number.isFinite(ebc) ? ebcToHex(ebc) : null;
+  input.style.background = hex || "";
+  input.style.color = hex ? readableTextColor(hex) : "";
+}
+
 // EBC-Feld je Schüttungszeile: bei Lagerartikel dessen Eigenfarbe
 // (schreibgeschützt), sonst frei eintragbar - ein zuvor von Hand
 // eingetragener Wert bleibt beim Zwischenwechsel erhalten.
@@ -286,6 +330,7 @@ function updateGrainEbcInputs() {
       input.placeholder = "EBC";
       input.readOnly = false;
     }
+    colorGrainEbcInput(input);
   });
 }
 
@@ -312,7 +357,7 @@ function updateGrainSums() {
   else if (rows.length && !(volume > 0)) colorText = "– (Ausschlagwürze fehlt)";
   setSums("grain", [
     ["Menge Malz gesamt", `${fmtNum(totalKg, 2)} kg`],
-    ["Bierfarbe", colorText],
+    ["Bierfarbe", colorText, beerEbc !== null ? ebcToHex(beerEbc) : null],
   ]);
 }
 
