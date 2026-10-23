@@ -376,7 +376,11 @@ updateFormSums();
 // Elemente mit gleichem data-pie-index innerhalb einer data-pie-group.
 document.addEventListener("mouseover", (event) => {
   const group = event.target.closest("[data-pie-group]");
-  if (!group) return;
+  if (!group) {
+    // Auf Touch-Geräten feuert mouseout nicht - Tippen woanders löst die Hervorhebung.
+    document.querySelectorAll("[data-pie-group] .is-hover").forEach((el) => el.classList.remove("is-hover"));
+    return;
+  }
   const hit = event.target.closest("[data-pie-index]");
   group.querySelectorAll("[data-pie-index].is-hover").forEach((el) => el.classList.remove("is-hover"));
   if (hit) group.querySelectorAll(`[data-pie-index="${hit.dataset.pieIndex}"]`).forEach((el) => el.classList.add("is-hover"));
