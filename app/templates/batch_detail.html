@@ -89,10 +89,13 @@
       <div class="grain-pie" aria-label="Anteile der Malze an der Schüttung (nach Menge)">
         <svg viewBox="0 0 200 200">
           {% for g in grain_rows if g.share_percent %}
-          <g class="grain-slice" data-pie-index="{{ g.number }}">
+          <g class="grain-slice" data-pie-index="{{ g.number }}" style="--dx: {{ g.dx }}; --dy: {{ g.dy }};">
             <title>{{ g.number }}. {{ g.name }}: {{ g.kg|fmt(2) }} kg ({{ g.share_percent|fmt(1) }} %)</title>
-            {% if g.full_circle %}<circle cx="100" cy="100" r="92" fill="{{ g.color }}"/>{% else %}<path d="{{ g.path }}" fill="{{ g.color }}"/>{% endif %}
-            {% if g.label_x is not none %}<text x="{{ g.label_x }}" y="{{ g.label_y }}" text-anchor="middle" dominant-baseline="central" fill="{{ g.text_color }}">{{ g.number }}</text>{% endif %}
+            <g class="grain-slice-visual">
+              {% if g.full_circle %}<circle cx="100" cy="100" r="88" fill="{{ g.color }}"/>{% else %}<path d="{{ g.path }}" fill="{{ g.color }}"/>{% endif %}
+              {% if g.label_x is not none %}<text x="{{ g.label_x }}" y="{{ g.label_y }}" text-anchor="middle" dominant-baseline="central" fill="{{ g.text_color }}">{{ g.number }}</text>{% endif %}
+            </g>
+            {% if g.full_circle %}<circle class="grain-hit" cx="100" cy="100" r="88"/>{% else %}<path class="grain-hit" d="{{ g.path }}"/>{% endif %}
           </g>
           {% endfor %}
         </svg>

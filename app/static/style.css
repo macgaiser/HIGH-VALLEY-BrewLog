@@ -1289,9 +1289,18 @@ form.card label.field-checkbox input[type="checkbox"] {
 .grain-table-wrap { flex: 1 1 200px; min-width: 0; }
 .grain-pie { flex: 0 0 150px; width: 150px; margin: 0 auto; }
 .grain-pie svg { width: 100%; height: auto; display: block; }
-.grain-slice path, .grain-slice circle { stroke: var(--card-bg); stroke-width: 2; }
-.grain-slice text { font-size: 15px; font-weight: 700; pointer-events: none; }
-.grain-slice.is-hover path, .grain-slice.is-hover circle { stroke: rgba(107, 52, 23, 0.45); stroke-width: 2.5; }
+.grain-slice-visual path, .grain-slice-visual circle { stroke: var(--card-bg); stroke-width: 2; }
+.grain-slice text { font-size: 15px; font-weight: 700; }
+/* Hover: der Ausschnitt rückt in Richtung seiner Mitte aus der Torte heraus.
+   Die unsichtbare, unbewegte .grain-hit-Fläche liegt darüber, damit der
+   Mauszeiger beim Herausrücken nicht den Hover verliert (Flackern). */
+.grain-slice-visual { pointer-events: none; transition: transform 0.15s ease-out, filter 0.15s ease-out; }
+.grain-slice.is-hover .grain-slice-visual {
+  transform: translate(calc(var(--dx) * 9px), calc(var(--dy) * 9px));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+}
+.grain-hit { fill: transparent; pointer-events: all; }
+@media (prefers-reduced-motion: reduce) { .grain-slice-visual { transition: none; } }
 .grain-badge { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(0, 0, 0, 0.2); }
 .grain-badge-cell { width: 2rem; }
 .grain-layout tr.is-hover { background: rgba(240, 190, 51, 0.18); }

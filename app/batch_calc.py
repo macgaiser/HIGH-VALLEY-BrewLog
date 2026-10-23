@@ -90,7 +90,7 @@ def grain_pie_rows(batch: Batch) -> list[dict]:
     additions = sorted(batch.grain_additions, key=lambda g: g.amount_kg or 0, reverse=True)
     total = sum(g.amount_kg or 0 for g in additions if (g.amount_kg or 0) > 0)
     cx = cy = 100.0
-    radius = 92.0
+    radius = 88.0  # kleiner als der halbe viewBox, damit ein herausgerueckter Hover-Ausschnitt nicht abgeschnitten wird
     angle = -math.pi / 2
     rows: list[dict] = []
     for i, g in enumerate(additions):
@@ -116,6 +116,8 @@ def grain_pie_rows(batch: Batch) -> list[dict]:
             "path": None,
             "label_x": None,
             "label_y": None,
+            "dx": 0.0,
+            "dy": 0.0,
         }
         kg = g.amount_kg or 0
         if total > 0 and kg > 0:
@@ -131,8 +133,11 @@ def grain_pie_rows(batch: Batch) -> list[dict]:
                     f"M{cx:.0f},{cy:.0f} L{x0:.2f},{y0:.2f} "
                     f"A{radius:.0f},{radius:.0f} 0 {1 if share > 0.5 else 0} 1 {x1:.2f},{y1:.2f} Z"
                 )
+            mid = angle + share * math.pi
+            if not row["full_circle"]:
+                row["dx"] = round(math.cos(mid), 3)  # Richtung zum Herausruecken beim Hover
+                row["dy"] = round(math.sin(mid), 3)
             if share >= 0.05:
-                mid = angle + share * math.pi
                 row["label_x"] = round(cx + radius * 0.62 * math.cos(mid), 2)
                 row["label_y"] = round(cy + radius * 0.62 * math.sin(mid), 2)
             angle += share * 2 * math.pi
