@@ -295,11 +295,25 @@ function ebcToHex(ebc) {
   }
   return "#" + rgb.map((c) => Math.round(c).toString(16).padStart(2, "0")).join("");
 }
-function readableTextColor(hex) {
+// Schwarz oder Weiß, je nachdem welches den höheren WCAG-Kontrast zum
+// Hintergrund hat (über die gesamte EBC-Farbtabelle mindestens 4,5:1).
+// Eine reine Helligkeitsschwelle ließ z.B. weiße Schrift auf mittlerem
+// Orange (ca. 13-22 EBC) bei nur ca. 2,6:1 stehen.
+function relativeLuminance(hex) {
+  const lin = (c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#2b0000" : "#ffffff";
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+function readableTextColor(hex) {
+  const lum = relativeLuminance(hex);
+  const contrastWhite = 1.05 / (lum + 0.05);
+  const contrastBlack = (lum + 0.05) / 0.05;
+  return contrastWhite >= contrastBlack ? "#ffffff" : "#000000";
 }
 // EBC-Feld einer Schüttungszeile in der Bierfarbe seines Wertes einfärben
 // (leer/ungültig -> Standarddarstellung).

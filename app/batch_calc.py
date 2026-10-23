@@ -97,12 +97,20 @@ def grain_pie_rows(batch: Batch) -> list[dict]:
         ebc = grain_color_ebc(g)
         color = formulas.ebc_to_hex(ebc) if ebc is not None else "#cfc8b8"
         r, gr, b = (int(color[k : k + 2], 16) for k in (1, 3, 5))
+
+        def _lin(c: int) -> float:
+            v = c / 255
+            return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+        lum = 0.2126 * _lin(r) + 0.7152 * _lin(gr) + 0.0722 * _lin(b)
+        # Schwarz oder Weiss mit dem hoeheren WCAG-Kontrast zur Malzfarbe.
+        text_color = "#ffffff" if 1.05 / (lum + 0.05) >= (lum + 0.05) / 0.05 else "#000000"
         row = {
             "number": i + 1,
             "name": g.malt_name,
             "kg": g.amount_kg,
             "color": color,
-            "text_color": "#2b2015" if 0.299 * r + 0.587 * gr + 0.114 * b > 150 else "#ffffff",
+            "text_color": text_color,
             "share_percent": None,
             "full_circle": False,
             "path": None,
