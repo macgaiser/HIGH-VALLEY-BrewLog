@@ -372,6 +372,12 @@ _EBC_COLOR_TABLE: tuple[tuple[float, int, int, int], ...] = (
 )
 
 
+def ebc_color_table() -> list[list[float]]:
+    """Die EBC-Farbtabelle als [[ebc, r, g, b], ...] - fuer den JS-Nachbau
+    von ebc_to_rgb() im Sud-Formular (Tortendiagramm der Schuettung)."""
+    return [list(row) for row in _EBC_COLOR_TABLE]
+
+
 def ebc_to_rgb(ebc: float) -> tuple[int, int, int]:
     """RGB-Naeherung der Bierfarbe zu einem EBC-Wert, aus der Farbtabelle.
 

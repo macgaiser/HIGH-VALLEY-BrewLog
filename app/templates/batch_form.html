@@ -111,12 +111,14 @@
 
   <section class="card">
     <div class="section-title-row"><h2><span>Schüttung</span><img class="step-icon" src="/static/img/step-schroten.png" alt=""></h2><button class="btn btn-small" data-add-row="grain">+ Zeile</button></div>
-    <div class="table-scroll">
+    <div class="grain-layout">
+    <div class="table-scroll grain-table-wrap">
     <table class="form-table">
-      <thead><tr><th>Lagerartikel</th><th>Alternative (nicht im Lager)</th><th>EBC <button type="button" class="info-btn" data-info-toggle="grain-ebc-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></th><th>Menge (kg)</th><th>Farbanteil (EBC)</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Lagerartikel</th><th>Alternative (nicht im Lager)</th><th>EBC <button type="button" class="info-btn" data-info-toggle="grain-ebc-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></th><th>Menge (kg)</th><th>Farbanteil (EBC)</th><th></th></tr></thead>
       <tbody data-rows="grain">
         {% for g in (batch.grain_additions if batch else []) %}
         <tr>
+          <td><span class="grain-badge" data-grain-badge></span></td>
           <td>{{ inv_select('malz', inventory.malz, g.inventory_item_id, 'grain_inventory_id') }}</td>
           <td><input type="text" name="grain_malt_name" value="{{ '' if g.inventory_item_id else g.malt_name }}"></td>
           <td><input type="number" step="0.1" min="0" name="grain_color_ebc" value="{{ g.color_ebc if g.color_ebc is not none and not g.inventory_item_id else '' }}" placeholder="EBC"></td>
@@ -128,8 +130,11 @@
       </tbody>
     </table>
     </div>
+    <div class="grain-pie" id="grain-pie" hidden aria-label="Anteile der Malze an der Schüttung (nach Menge)"></div>
+    </div>
     <template data-row-template="grain">
       <tr>
+        <td><span class="grain-badge" data-grain-badge></span></td>
         <td>{{ inv_select('malz', inventory.malz, None, 'grain_inventory_id') }}</td>
         <td><input type="text" name="grain_malt_name"></td>
         <td><input type="number" step="0.1" min="0" name="grain_color_ebc" placeholder="EBC"></td>
@@ -140,6 +145,7 @@
     </template>
     <p class="hint info-popover" id="grain-ebc-hint" hidden>Bei einem Lagerartikel gilt dessen hinterlegter EBC-Wert (wird hier angezeigt, nicht änderbar). Bei einer Zutat ohne Lagerartikel trägst du den EBC-Wert des Malzes selbst ein. Nur wenn alle Malze einen EBC-Wert haben, berechnet die App die Bierfarbe. "Farbanteil" zeigt, wie viel EBC der Bierfarbe auf das jeweilige Malz entfällt (nach Menge und EBC; die Summe ergibt die Bierfarbe).</p>
     <div class="form-sums" data-sums="grain"></div>
+    <script>window.EBC_COLOR_TABLE = {{ ebc_color_table|tojson }};</script>
   </section>
 
   <section class="card">
