@@ -372,6 +372,20 @@ updateColorEbcAutoState();
 updateIbuPreviews();
 updateFormSums();
 
+// Sud-Ansicht: Schüttungstabelle und Tortendiagramm gemeinsam hervorheben -
+// Elemente mit gleichem data-pie-index innerhalb einer data-pie-group.
+document.addEventListener("mouseover", (event) => {
+  const group = event.target.closest("[data-pie-group]");
+  if (!group) return;
+  const hit = event.target.closest("[data-pie-index]");
+  group.querySelectorAll("[data-pie-index].is-hover").forEach((el) => el.classList.remove("is-hover"));
+  if (hit) group.querySelectorAll(`[data-pie-index="${hit.dataset.pieIndex}"]`).forEach((el) => el.classList.add("is-hover"));
+});
+document.addEventListener("mouseout", (event) => {
+  const group = event.target.closest("[data-pie-group]");
+  if (group && !group.contains(event.relatedTarget)) group.querySelectorAll(".is-hover").forEach((el) => el.classList.remove("is-hover"));
+});
+
 // Datumsfelder zeigen ihr Format sonst je nach Browser-/Systemsprache an
 // (z.B. mm/dd/yyyy) statt einheitlich dd.mm.yyyy - flatpickr übernimmt die
 // Anzeige, das eigentliche Feld sendet weiterhin ISO-Format (yyyy-mm-dd).
