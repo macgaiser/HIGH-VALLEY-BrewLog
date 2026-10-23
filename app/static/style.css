@@ -1285,18 +1285,6 @@ form.card label.field-checkbox input[type="checkbox"] {
 .form-sums { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--muted); }
 .form-sums:empty { display: none; }
 .form-sum strong { color: var(--text); }
-.grain-layout { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; }
-.grain-table-wrap { flex: 1 1 520px; min-width: 0; }
-.grain-table-wrap .form-table { min-width: 560px; }
-.grain-pie { flex: 0 0 190px; width: 190px; margin: 0 auto; }
-.grain-pie[hidden] { display: none; }
-.grain-pie svg { width: 100%; height: auto; display: block; }
-.grain-slice path, .grain-slice circle { stroke: var(--card-bg); stroke-width: 2; }
-.grain-slice text { font-size: 15px; font-weight: 700; pointer-events: none; }
-.grain-slice.is-hover path, .grain-slice.is-hover circle { stroke: var(--brown); stroke-width: 4; }
-.grain-badge { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(0, 0, 0, 0.2); }
-.grain-badge:empty { visibility: hidden; }
-tbody tr.grain-row-hover { background: rgba(240, 190, 51, 0.18); }
 .form-table input[readonly] { background: #f1ede2; color: var(--muted); }
 .form-table th { text-align: left; font-size: 0.8rem; color: var(--muted); padding: 0.3rem; }
 
