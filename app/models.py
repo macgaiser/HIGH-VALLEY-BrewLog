@@ -335,8 +335,9 @@ class DryHopAddition(SQLModel, table=True):
 
 
 class CarbonationEntry(SQLModel, table=True):
-    """Karbonisierung: entweder Zucker je Flaschengröße (kind="zucker") oder
-    Keg mit Enddruck bei Endtemperatur (kind="keg")."""
+    """Karbonisierung: Zucker je Flaschengröße (kind="zucker" = Haushalts-
+    zucker, "traubenzucker") oder Keg mit Enddruck bei Endtemperatur
+    (kind="keg")."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
     batch_id: int = Field(foreign_key="batch.id")

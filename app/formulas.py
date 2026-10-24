@@ -411,9 +411,10 @@ def ebc_to_hex(ebc: float) -> str:
 # --- Karbonisierung -------------------------------------------------------
 # 1 Volumenanteil CO2 (bei 0 degC, 1 atm) entspricht ca. 1,977 g CO2 je Liter.
 CO2_G_PER_L_PER_VOL = 1.977
-# Gaerung von Haushaltszucker (Saccharose) liefert ca. 0,5 g CO2 je g Zucker
-# (Traubenzucker etwas weniger).
-SUGAR_CO2_YIELD_G_PER_G = 0.5
+# CO2 aus der Flaschengaerung je g Zucker: Haushaltszucker (Saccharose) ca.
+# 0,5 g; Traubenzucker (handelsuebliches Dextrose-Monohydrat, ca. 91 % so
+# ergiebig wie Haushaltszucker) ca. 0,455 g.
+SUGAR_CO2_YIELD_G_PER_G = {"zucker": 0.5, "traubenzucker": 0.455}
 # Annahme fuer die Rest-CO2, wenn keine Gaertemperatur eingetragen ist.
 DEFAULT_FERMENTATION_TEMP_C = 20.0
 
@@ -442,9 +443,9 @@ def residual_co2_g_per_l(max_fermentation_temp_c: float) -> float:
     return max(vol, 0.0) * CO2_G_PER_L_PER_VOL
 
 
-def priming_co2_g_per_l(sugar_g: float, volume_l: float) -> float:
+def priming_co2_g_per_l(sugar_g: float, volume_l: float, kind: str = "zucker") -> float:
     """Durch Flaschengaerung neu gebildete CO2 (g/L) aus der Zuckergabe je
-    Flaschengroesse."""
+    Flaschengroesse. kind: "zucker" (Haushaltszucker) oder "traubenzucker"."""
     if volume_l <= 0 or sugar_g <= 0:
         return 0.0
-    return sugar_g / volume_l * SUGAR_CO2_YIELD_G_PER_G
+    return sugar_g / volume_l * SUGAR_CO2_YIELD_G_PER_G.get(kind, SUGAR_CO2_YIELD_G_PER_G["zucker"])

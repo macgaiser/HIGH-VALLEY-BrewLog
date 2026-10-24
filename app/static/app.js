@@ -364,7 +364,8 @@ function updateCarbonation() {
   const assumed = !Number.isFinite(fermTempRaw);
   const residual = residualCo2(assumed ? 20 : fermTempRaw);
   document.querySelectorAll('tbody[data-rows="carb"] tr').forEach((row) => {
-    const kind = row.querySelector('select[name="carb_kind"]')?.value === "keg" ? "keg" : "zucker";
+    const selectedKind = row.querySelector('select[name="carb_kind"]')?.value;
+    const kind = selectedKind === "keg" || selectedKind === "traubenzucker" ? selectedKind : "zucker";
     row.dataset.carbKind = kind;
     const out = row.querySelector("[data-carb-co2]");
     if (!out) return;
@@ -376,16 +377,15 @@ function updateCarbonation() {
       if (pressureRaw !== "" && tempRaw !== "" && Number.isFinite(parseFloat(pressureRaw)) && Number.isFinite(parseFloat(tempRaw))) {
         const co2 = kegCo2(parseFloat(pressureRaw), parseFloat(tempRaw));
         text = `${fmtNum(co2, 1)} g/L`;
-        sub = `≈ ${fmtNum(co2 / CO2_G_PER_L_PER_VOL, 1)} Vol.`;
       }
     } else {
       const sugar = numVal(row, "carb_sugar_g");
       const bottle = numVal(row, "carb_bottle_l");
       if (sugar > 0 && bottle > 0) {
-        const fromSugar = (sugar / bottle) * 0.5;
+        const fromSugar = ((sugar / bottle) * (kind === "traubenzucker" ? 0.455 : 0.5));
         const total = fromSugar + residual;
         text = `${fmtNum(total, 1)} g/L`;
-        sub = `Zucker ${fmtNum(fromSugar, 1)} + Rest ${fmtNum(residual, 1)}${assumed ? " (20 °C angenommen)" : ""} · ≈ ${fmtNum(total / CO2_G_PER_L_PER_VOL, 1)} Vol.`;
+        sub = `Zucker ${fmtNum(fromSugar, 1)} + Rest ${fmtNum(residual, 1)}${assumed ? " (20 °C angenommen)" : ""}`;
       }
     }
     out.textContent = text;
@@ -404,11 +404,6 @@ function updateSimpleSums() {
   let dryHop = 0;
   document.querySelectorAll('tbody[data-rows="dryhop"] tr').forEach((row) => (dryHop += numVal(row, "dryhop_amount_g")));
   setSums("dryhop", [["Stopfhopfen gesamt", `${fmtNum(dryHop, 1)} g`]]);
-  let sugar = 0;
-  document.querySelectorAll('tbody[data-rows="carb"] tr').forEach((row) => {
-    if (row.querySelector('select[name="carb_kind"]')?.value !== "keg") sugar += numVal(row, "carb_sugar_g");
-  });
-  setSums("carb", [["Zucker gesamt", `${fmtNum(sugar, 1)} g`]]);
   let taskMin = 0;
   document.querySelectorAll('tbody[data-rows="task"] tr').forEach((row) => (taskMin += numVal(row, "task_duration_min")));
   setSums("task", [["Dauer gesamt", fmtMinutes(taskMin)]]);

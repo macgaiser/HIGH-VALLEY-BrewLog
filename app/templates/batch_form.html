@@ -22,7 +22,8 @@
 <tr data-carb-kind="{{ c.kind if c else 'zucker' }}">
   <td>
     <select name="carb_kind">
-      <option value="zucker" {% if not c or c.kind != 'keg' %}selected{% endif %}>Zucker (Flasche)</option>
+      <option value="zucker" {% if not c or c.kind == 'zucker' %}selected{% endif %}>Haushaltszucker (Flasche)</option>
+      <option value="traubenzucker" {% if c and c.kind == 'traubenzucker' %}selected{% endif %}>Traubenzucker (Flasche)</option>
       <option value="keg" {% if c and c.kind == 'keg' %}selected{% endif %}>Keg (Enddruck)</option>
     </select>
   </td>
@@ -349,8 +350,7 @@
     <template data-row-template="carb">
       {{ carb_row(None) }}
     </template>
-    <p class="hint">Zucker (Flasche) oder Keg (Enddruck als Überdruck am Manometer bei der Lagertemperatur). Die CO₂-Menge wird live in g/L berechnet (Zucker: Haushaltszucker + Rest-CO₂ nach der Gärung).</p>
-    <div class="form-sums" data-sums="carb"></div>
+    <p class="hint">Zucker (Flasche, Haushalts- oder Traubenzucker) oder Keg (Enddruck als Überdruck am Manometer bei der Lagertemperatur). Die CO₂-Menge wird live in g/L berechnet (Zucker: aus dem Zucker gebildete CO₂ + Rest-CO₂ nach der Gärung).</p>
   </section>
 
   <section class="card">

@@ -11,6 +11,7 @@ from app.batch_calc import (
     apply_frozen_cost,
     auto_lock_cost,
     compute_metrics,
+    CARBONATION_NAMES,
     carbonation_rows,
     grain_pie_rows,
     resolve_color_hex,
@@ -549,7 +550,8 @@ async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
         return values[i] if i < len(values) else ""
 
     for i in range(max(len(kinds), len(sugars))):
-        if _at(kinds, i) == "keg":
+        kind = _at(kinds, i) if _at(kinds, i) in ("keg", "traubenzucker") else "zucker"
+        if kind == "keg":
             pressure = _f(_at(pressures, i))
             if pressure is None:
                 continue
@@ -572,6 +574,8 @@ async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
                     position=i,
                     sugar_g=_f(_at(sugars, i)) or 0,
                     bottle_volume_l=_f(_at(bottles, i)) or 0.5,
+                    kind=kind,
+                    label=CARBONATION_NAMES[kind],
                 )
             )
 
