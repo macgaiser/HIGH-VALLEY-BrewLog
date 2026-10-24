@@ -128,7 +128,7 @@ async def inventory_update(item_id: int, request: Request, session: Session = De
     item.price = new_price
     session.add(item)
     session.commit()
-    return RedirectResponse("/inventory", status_code=303)
+    return RedirectResponse(f"/inventory/{item_id}", status_code=303)
 
 
 @router.post("/{item_id}/restock")
@@ -147,7 +147,7 @@ async def inventory_restock(item_id: int, request: Request, session: Session = D
 
             session.add(InventoryTransaction(item_id=item.id, delta=amount, note=note or "Korrektur"))
             session.commit()
-    return RedirectResponse("/inventory", status_code=303)
+    return RedirectResponse(f"/inventory/{item_id}", status_code=303)
 
 
 def _manual_transaction(session: Session, item_id: int, tx_id: int) -> InventoryTransaction | None:

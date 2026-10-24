@@ -48,7 +48,7 @@
 
   <div class="form-actions">
     <button class="btn btn-primary" type="submit">Speichern</button>
-    <a class="btn" href="/inventory">Abbrechen</a>
+    <a class="btn" href="{{ '/inventory/%d'|format(item.id) if item else '/inventory' }}">Abbrechen</a>
   </div>
 </form>
 {% endblock %}
