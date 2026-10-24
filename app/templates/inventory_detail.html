@@ -43,7 +43,7 @@
 <section class="card">
   <h2>Buchungsverlauf</h2>
   <table class="mini-table">
-    <thead><tr><th>Datum</th><th>Menge</th><th>Grund</th></tr></thead>
+    <thead><tr><th>Datum</th><th>Menge</th><th>Grund</th><th></th></tr></thead>
     {% for t in transactions %}
     <tr>
       <td>{{ t.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
@@ -55,10 +55,12 @@
         {{ t.note }}
         {% endif %}
       </td>
+      <td>{% if not t.batch_id %}<a class="btn btn-small" href="/inventory/{{ item.id }}/transactions/{{ t.id }}/edit">Bearbeiten</a>{% endif %}</td>
     </tr>
     {% else %}
-    <tr><td colspan="3">Noch keine Buchungen.</td></tr>
+    <tr><td colspan="4">Noch keine Buchungen.</td></tr>
     {% endfor %}
   </table>
+  <p class="hint">Manuelle Buchungen lassen sich über „Bearbeiten“ anpassen oder löschen (der Bestand wird entsprechend korrigiert). Buchungen aus einem Sud werden über den Sud geändert.</p>
 </section>
 {% endblock %}
