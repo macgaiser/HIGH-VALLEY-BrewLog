@@ -18,6 +18,25 @@
 </select>
 {% endmacro %}
 
+{% macro carb_row(c) %}
+<tr data-carb-kind="{{ c.kind if c else 'zucker' }}">
+  <td>
+    <select name="carb_kind">
+      <option value="zucker" {% if not c or c.kind == 'zucker' %}selected{% endif %}>Haushaltszucker (Flasche)</option>
+      <option value="traubenzucker" {% if c and c.kind == 'traubenzucker' %}selected{% endif %}>Traubenzucker (Flasche)</option>
+      <option value="keg" {% if c and c.kind == 'keg' %}selected{% endif %}>Keg (Enddruck)</option>
+    </select>
+  </td>
+  <td class="carb-sugar-cell"><input type="number" step="0.1" min="0" name="carb_sugar_g" value="{{ c.sugar_g if c and c.kind != 'keg' else '' }}"></td>
+  <td class="carb-sugar-cell"><input type="number" step="0.01" min="0" name="carb_bottle_l" value="{{ c.bottle_volume_l if c and c.kind != 'keg' else 0.5 }}"></td>
+  <td class="carb-keg-cell"><input type="number" step="0.01" min="0" name="carb_pressure_bar" value="{{ c.pressure_bar if c and c.pressure_bar is not none else '' }}"></td>
+  <td class="carb-keg-cell"><input type="number" step="0.5" name="carb_temperature_c" value="{{ c.temperature_c if c and c.temperature_c is not none else '' }}"></td>
+  <td><span data-carb-co2>–</span></td>
+  <td><span data-carb-abv>–</span></td>
+  <td><button class="btn btn-small" data-remove-row>✕</button></td>
+</tr>
+{% endmacro %}
+
 <div class="page-header">
   <h1>{{ "Sud #%d bearbeiten"|format(batch.batch_number) if batch else "Neuer Sud" }}</h1>
 </div>
@@ -313,28 +332,27 @@
 
   <section class="card">
     <div class="section-title-row"><h2><span>Karbonisierung</span><img class="step-icon" src="/static/img/step-abfuellen.png" alt=""></h2><button class="btn btn-small" data-add-row="carb">+ Zeile</button></div>
+    <div class="field-row" style="margin-top: 0.6rem; max-width: 14rem;">
+      <div>
+        <label>Höchste Gärtemperatur (°C) <button type="button" class="info-btn" data-info-toggle="carb-ferm-temp-hint" title="Info anzeigen" aria-label="Info anzeigen">i</button></label>
+        <input type="number" step="0.5" name="carbonation_ferm_temp_c" value="{{ batch.carbonation_ferm_temp_c if batch and batch.carbonation_ferm_temp_c is not none else '' }}" placeholder="20">
+      </div>
+    </div>
+    <p class="hint info-popover" id="carb-ferm-temp-hint" hidden>Nach der Gärung bleibt je nach höchster Temperatur schon etwas CO₂ im Bier gelöst (bei 20 °C ca. 1,7 g/L). Das zählt bei der Zucker-Karbonisierung zur Gesamt-CO₂ dazu. Ohne Eintrag wird mit 20 °C gerechnet. Beim Keg ist das nicht nötig - dort bestimmen Enddruck und Temperatur die CO₂-Menge allein.</p>
     <div class="table-scroll">
-    <table class="form-table">
-      <thead><tr><th>Zucker (g)</th><th>je Flaschengröße (l)</th><th></th></tr></thead>
+    <table class="form-table" id="carb-table">
+      <thead><tr><th>Art</th><th>Zucker (g)</th><th>je Flaschengröße (l)</th><th>Enddruck (bar)</th><th>bei Temp. (°C)</th><th>CO₂ gesamt</th><th>Zusätzlicher Alkohol</th><th></th></tr></thead>
       <tbody data-rows="carb">
         {% for c in (batch.carbonation_entries if batch else []) %}
-        <tr>
-          <td><input type="number" step="0.1" name="carb_sugar_g" value="{{ c.sugar_g }}"></td>
-          <td><input type="number" step="0.01" name="carb_bottle_l" value="{{ c.bottle_volume_l }}"></td>
-          <td><button class="btn btn-small" data-remove-row>✕</button></td>
-        </tr>
+        {{ carb_row(c) }}
         {% endfor %}
       </tbody>
     </table>
     </div>
     <template data-row-template="carb">
-      <tr>
-        <td><input type="number" step="0.1" name="carb_sugar_g"></td>
-        <td><input type="number" step="0.01" name="carb_bottle_l" value="0.5"></td>
-        <td><button class="btn btn-small" data-remove-row>✕</button></td>
-      </tr>
+      {{ carb_row(None) }}
     </template>
-    <div class="form-sums" data-sums="carb"></div>
+    <p class="hint">Zucker (Flasche, Haushalts- oder Traubenzucker) oder Keg (Enddruck als Überdruck am Manometer bei der Lagertemperatur). Die CO₂-Menge wird live in g/L berechnet (Zucker: aus dem Zucker gebildete CO₂ + Rest-CO₂ nach der Gärung).</p>
   </section>
 
   <section class="card">

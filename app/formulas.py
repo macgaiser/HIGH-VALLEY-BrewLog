@@ -412,3 +412,60 @@ def ebc_to_hex(ebc: float) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
+
+
+# --- Karbonisierung -------------------------------------------------------
+# 1 Volumenanteil CO2 (bei 0 degC, 1 atm) entspricht ca. 1,977 g CO2 je Liter.
+CO2_G_PER_L_PER_VOL = 1.977
+# CO2 aus der Flaschengaerung je g Zucker: Haushaltszucker (Saccharose) ca.
+# 0,5 g; Traubenzucker (handelsuebliches Dextrose-Monohydrat, ca. 91 % so
+# ergiebig wie Haushaltszucker) ca. 0,455 g.
+SUGAR_CO2_YIELD_G_PER_G = {"zucker": 0.5, "traubenzucker": 0.455}
+# Annahme fuer die Rest-CO2, wenn keine Gaertemperatur eingetragen ist.
+DEFAULT_FERMENTATION_TEMP_C = 20.0
+
+
+def keg_co2_g_per_l(pressure_bar: float, temperature_c: float) -> float:
+    """Geloeste CO2-Menge (g/L) im Keg bei Gleichgewicht: Enddruck als
+    Ueberdruck (Manometer) in bar bei der Lagertemperatur in degC.
+
+    Gaengige Naeherung der CO2-Loeslichkeit (Volumenanteile, Druck in psi
+    absolut, Temperatur in degF):
+        Vol = P_abs * (0.01821 + 0.090115 * e^(-(T-32)/43.11)) - 0.003342
+    """
+    psi_abs = pressure_bar * 14.5038 + 14.6959
+    temp_f = temperature_c * 9 / 5 + 32
+    vol = psi_abs * (0.01821 + 0.090115 * math.exp(-(temp_f - 32) / 43.11)) - 0.003342
+    return max(vol, 0.0) * CO2_G_PER_L_PER_VOL
+
+
+def residual_co2_g_per_l(max_fermentation_temp_c: float) -> float:
+    """Nach der Gaerung noch geloeste CO2 (g/L), abhaengig von der hoechsten
+    Temperatur, die das Bier nach der Gaerung hatte:
+        Vol = 3.0378 - 0.050062 * T + 0.00026555 * T^2   (T in degF)
+    """
+    temp_f = max_fermentation_temp_c * 9 / 5 + 32
+    vol = 3.0378 - 0.050062 * temp_f + 0.00026555 * temp_f**2
+    return max(vol, 0.0) * CO2_G_PER_L_PER_VOL
+
+
+def priming_co2_g_per_l(sugar_g: float, volume_l: float, kind: str = "zucker") -> float:
+    """Durch Flaschengaerung neu gebildete CO2 (g/L) aus der Zuckergabe je
+    Flaschengroesse. kind: "zucker" (Haushaltszucker) oder "traubenzucker"."""
+    if volume_l <= 0 or sugar_g <= 0:
+        return 0.0
+    return sugar_g / volume_l * SUGAR_CO2_YIELD_G_PER_G.get(kind, SUGAR_CO2_YIELD_G_PER_G["zucker"])
+
+
+# Bei der Gaerung entsteht je mol CO2 ein mol Ethanol: Ethanolmasse =
+# CO2-Masse * 46,07 / 44,01. Dichte von Ethanol ca. 0,789 g/mL.
+ETHANOL_G_PER_G_CO2 = 46.07 / 44.01
+ETHANOL_DENSITY_G_PER_ML = 0.789
+
+
+def priming_abv_percent(sugar_g: float, volume_l: float, kind: str = "zucker") -> float:
+    """Zusaetzlicher Alkohol (Vol.-%) durch die Zuckergabe in der Flasche -
+    aus derselben vergorenen Zuckermenge wie die gebildete CO2."""
+    co2_g_per_l = priming_co2_g_per_l(sugar_g, volume_l, kind)
+    ethanol_ml_per_l = co2_g_per_l * ETHANOL_G_PER_G_CO2 / ETHANOL_DENSITY_G_PER_ML
+    return ethanol_ml_per_l / 10

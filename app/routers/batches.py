@@ -12,6 +12,8 @@ from app.batch_calc import (
     apply_frozen_cost,
     auto_lock_cost,
     compute_metrics,
+    CARBONATION_NAMES,
+    carbonation_rows,
     grain_pie_rows,
     resolve_color_hex,
 )
@@ -395,6 +397,7 @@ async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
     water_profile_id = form.get("water_profile_id")
     batch.water_profile_id = int(water_profile_id) if water_profile_id else None
     batch.boil_time_min = _f(form.get("boil_time_min"))
+    batch.carbonation_ferm_temp_c = _f(form.get("carbonation_ferm_temp_c"))
     batch.target_og_plato = _f(form.get("target_og_plato"))
     # pre_lauter_brix/post_lauter_brix/post_lauter_volume_l/water_adjustment_l/
     # post_boil_brix/post_boil_volume_l werden bewusst NICHT hier gesetzt -
@@ -539,19 +542,44 @@ async def _apply_form_to_batch(batch: Batch, form, session: Session) -> None:
             )
         )
 
+    kinds = form.getlist("carb_kind")
     sugars = form.getlist("carb_sugar_g")
     bottles = form.getlist("carb_bottle_l")
-    for i, sugar in enumerate(sugars):
-        if not sugar.strip():
-            continue
-        session.add(
-            CarbonationEntry(
-                batch_id=batch.id,
-                position=i,
-                sugar_g=_f(sugar) or 0,
-                bottle_volume_l=_f(bottles[i]) or 0.5 if i < len(bottles) else 0.5,
+    pressures = form.getlist("carb_pressure_bar")
+    temps = form.getlist("carb_temperature_c")
+
+    def _at(values: list[str], i: int) -> str:
+        return values[i] if i < len(values) else ""
+
+    for i in range(max(len(kinds), len(sugars))):
+        kind = _at(kinds, i) if _at(kinds, i) in ("keg", "traubenzucker") else "zucker"
+        if kind == "keg":
+            pressure = _f(_at(pressures, i))
+            if pressure is None:
+                continue
+            session.add(
+                CarbonationEntry(
+                    batch_id=batch.id,
+                    position=i,
+                    kind="keg",
+                    label="Keg",
+                    pressure_bar=pressure,
+                    temperature_c=_f(_at(temps, i)),
+                )
             )
-        )
+        else:
+            if not _at(sugars, i).strip():
+                continue
+            session.add(
+                CarbonationEntry(
+                    batch_id=batch.id,
+                    position=i,
+                    sugar_g=_f(_at(sugars, i)) or 0,
+                    bottle_volume_l=_f(_at(bottles, i)) or 0.5,
+                    kind=kind,
+                    label=CARBONATION_NAMES[kind],
+                )
+            )
 
     task_names = form.getlist("task_name")
     task_durations = form.getlist("task_duration_min")
@@ -629,6 +657,7 @@ def batch_detail(batch_id: int, request: Request, session: Session = Depends(get
             "batch": batch,
             "m": metrics,
             "grain_rows": grain_pie_rows(batch) if batch else [],
+            "carbonation": carbonation_rows(batch) if batch else None,
             "today": date.today().isoformat(),
             "prev_batch": prev_batch,
             "next_batch": next_batch,
@@ -947,6 +976,7 @@ def batch_copy(batch_id: int, session: Session = Depends(get_session)):
         water_profile_id=source.water_profile_id,
         boil_time_min=source.boil_time_min,
         target_og_plato=source.target_og_plato,
+        carbonation_ferm_temp_c=source.carbonation_ferm_temp_c,
     )
     session.add(copy)
     session.commit()
@@ -1022,6 +1052,9 @@ def batch_copy(batch_id: int, session: Session = Depends(get_session)):
                 sugar_g=c.sugar_g,
                 bottle_volume_l=c.bottle_volume_l,
                 label=c.label,
+                kind=c.kind,
+                pressure_bar=c.pressure_bar,
+                temperature_c=c.temperature_c,
             )
         )
     # Zeitplan wird nicht vom Quell-Sud uebernommen, sondern immer (wie bei
