@@ -101,7 +101,7 @@ async def inventory_create(request: Request, session: Session = Depends(get_sess
     initial_amount = float(form.get("initial_amount") or 0)
     if initial_amount > 0:
         restock(session, item, initial_amount, note="Anfangsbestand")
-    return RedirectResponse("/inventory", status_code=303)
+    return RedirectResponse(f"/inventory/{item.id}", status_code=303)
 
 
 @router.get("/{item_id}/edit")
