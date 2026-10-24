@@ -32,6 +32,7 @@
   <td class="carb-keg-cell"><input type="number" step="0.01" min="0" name="carb_pressure_bar" value="{{ c.pressure_bar if c and c.pressure_bar is not none else '' }}"></td>
   <td class="carb-keg-cell"><input type="number" step="0.5" name="carb_temperature_c" value="{{ c.temperature_c if c and c.temperature_c is not none else '' }}"></td>
   <td><span data-carb-co2>–</span></td>
+  <td><span data-carb-abv>–</span></td>
   <td><button class="btn btn-small" data-remove-row>✕</button></td>
 </tr>
 {% endmacro %}
@@ -339,7 +340,7 @@
     <p class="hint info-popover" id="carb-ferm-temp-hint" hidden>Nach der Gärung bleibt je nach höchster Temperatur schon etwas CO₂ im Bier gelöst (bei 20 °C ca. 1,7 g/L). Das zählt bei der Zucker-Karbonisierung zur Gesamt-CO₂ dazu. Ohne Eintrag wird mit 20 °C gerechnet. Beim Keg ist das nicht nötig - dort bestimmen Enddruck und Temperatur die CO₂-Menge allein.</p>
     <div class="table-scroll">
     <table class="form-table" id="carb-table">
-      <thead><tr><th>Art</th><th>Zucker (g)</th><th>je Flaschengröße (l)</th><th>Enddruck (bar)</th><th>bei Temp. (°C)</th><th>CO₂ gesamt</th><th></th></tr></thead>
+      <thead><tr><th>Art</th><th>Zucker (g)</th><th>je Flaschengröße (l)</th><th>Enddruck (bar)</th><th>bei Temp. (°C)</th><th>CO₂ gesamt</th><th>Zusätzlicher Alkohol</th><th></th></tr></thead>
       <tbody data-rows="carb">
         {% for c in (batch.carbonation_entries if batch else []) %}
         {{ carb_row(c) }}

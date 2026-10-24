@@ -449,3 +449,17 @@ def priming_co2_g_per_l(sugar_g: float, volume_l: float, kind: str = "zucker") -
     if volume_l <= 0 or sugar_g <= 0:
         return 0.0
     return sugar_g / volume_l * SUGAR_CO2_YIELD_G_PER_G.get(kind, SUGAR_CO2_YIELD_G_PER_G["zucker"])
+
+
+# Bei der Gaerung entsteht je mol CO2 ein mol Ethanol: Ethanolmasse =
+# CO2-Masse * 46,07 / 44,01. Dichte von Ethanol ca. 0,789 g/mL.
+ETHANOL_G_PER_G_CO2 = 46.07 / 44.01
+ETHANOL_DENSITY_G_PER_ML = 0.789
+
+
+def priming_abv_percent(sugar_g: float, volume_l: float, kind: str = "zucker") -> float:
+    """Zusaetzlicher Alkohol (Vol.-%) durch die Zuckergabe in der Flasche -
+    aus derselben vergorenen Zuckermenge wie die gebildete CO2."""
+    co2_g_per_l = priming_co2_g_per_l(sugar_g, volume_l, kind)
+    ethanol_ml_per_l = co2_g_per_l * ETHANOL_G_PER_G_CO2 / ETHANOL_DENSITY_G_PER_ML
+    return ethanol_ml_per_l / 10

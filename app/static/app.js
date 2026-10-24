@@ -369,6 +369,8 @@ function updateCarbonation() {
     row.dataset.carbKind = kind;
     const out = row.querySelector("[data-carb-co2]");
     if (!out) return;
+    const abvOut = row.querySelector("[data-carb-abv]");
+    if (abvOut) abvOut.textContent = "–";
     let text = "–";
     let sub = "";
     if (kind === "keg") {
@@ -385,6 +387,8 @@ function updateCarbonation() {
         const fromSugar = ((sugar / bottle) * (kind === "traubenzucker" ? 0.455 : 0.5));
         const total = fromSugar + residual;
         text = `${fmtNum(total, 1)} g/L`;
+        // Ethanol entsteht im Verhältnis 46,07 : 44,01 zur CO2 (Dichte 0,789 g/mL).
+        if (abvOut) abvOut.textContent = `+${fmtNum(((fromSugar * (46.07 / 44.01)) / 0.789) / 10, 2)} % Vol.`;
         sub = `Zucker ${fmtNum(fromSugar, 1)} + Rest ${fmtNum(residual, 1)}${assumed ? " (20 °C angenommen)" : ""}`;
       }
     }

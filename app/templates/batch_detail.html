@@ -226,14 +226,15 @@
           <td>{{ c.sugar_g|fmt(1) }} g je {{ c.bottle_volume_l|fmt(2) }} l Flasche</td>
           {% endif %}
           <td>{% if r.co2 is not none %}<strong>{{ r.co2|fmt(1) }} g/L</strong> {% else %}–{% endif %}</td>
+          <td>{% if r.abv_add is not none %}+{{ r.abv_add|fmt(2) }} % Vol.{% else %}–{% endif %}</td>
         </tr>
         {% else %}
-        <tr><td colspan="3">–</td></tr>
+        <tr><td colspan="4">–</td></tr>
         {% endfor %}
       </table>
       </div>
       {% if carbonation.rows|rejectattr("kind", "equalto", "keg")|list %}
-      <p class="hint">CO₂ gesamt = aus dem Zucker gebildete CO₂ + Rest-CO₂ nach der Gärung ({{ carbonation.residual|fmt(1) }} g/L{% if carbonation.temp_assumed %}, angenommen bei 20 °C Gärtemperatur – unter „Bearbeiten“ anpassbar{% else %}, bei {{ carbonation.ferm_temp|fmt(0) }} °C höchster Gärtemperatur{% endif %}). Ausbeute: Haushaltszucker 0,5 g CO₂ je g, Traubenzucker 0,455 g CO₂ je g.</p>
+      <p class="hint">CO₂ gesamt = aus dem Zucker gebildete CO₂ + Rest-CO₂ nach der Gärung ({{ carbonation.residual|fmt(1) }} g/L{% if carbonation.temp_assumed %}, angenommen bei 20 °C Gärtemperatur – unter „Bearbeiten“ anpassbar{% else %}, bei {{ carbonation.ferm_temp|fmt(0) }} °C höchster Gärtemperatur{% endif %}). Ausbeute: Haushaltszucker 0,5 g CO₂ je g, Traubenzucker 0,455 g CO₂ je g. Der zusätzliche Alkohol entsteht aus demselben vergorenen Zucker; beim Keg entsteht keiner.</p>
       {% endif %}
     </section>
   </div>
