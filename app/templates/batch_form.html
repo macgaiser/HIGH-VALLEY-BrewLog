@@ -140,6 +140,7 @@
     </template>
     <p class="hint info-popover" id="grain-ebc-hint" hidden>Bei einem Lagerartikel gilt dessen hinterlegter EBC-Wert (wird hier angezeigt, nicht änderbar). Bei einer Zutat ohne Lagerartikel trägst du den EBC-Wert des Malzes selbst ein. Nur wenn alle Malze einen EBC-Wert haben, berechnet die App die Bierfarbe. "Farbanteil" zeigt, wie viel EBC der Bierfarbe auf das jeweilige Malz entfällt (nach Menge und EBC; die Summe ergibt die Bierfarbe).</p>
     <div class="form-sums" data-sums="grain"></div>
+    <script>window.EBC_COLOR_TABLE = {{ ebc_color_table|tojson }};</script>
   </section>
 
   <section class="card">

@@ -90,24 +90,34 @@ def grain_pie_rows(batch: Batch) -> list[dict]:
     additions = sorted(batch.grain_additions, key=lambda g: g.amount_kg or 0, reverse=True)
     total = sum(g.amount_kg or 0 for g in additions if (g.amount_kg or 0) > 0)
     cx = cy = 100.0
-    radius = 92.0
+    radius = 88.0  # kleiner als der halbe viewBox, damit ein herausgerueckter Hover-Ausschnitt nicht abgeschnitten wird
     angle = -math.pi / 2
     rows: list[dict] = []
     for i, g in enumerate(additions):
         ebc = grain_color_ebc(g)
         color = formulas.ebc_to_hex(ebc) if ebc is not None else "#cfc8b8"
         r, gr, b = (int(color[k : k + 2], 16) for k in (1, 3, 5))
+
+        def _lin(c: int) -> float:
+            v = c / 255
+            return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+        lum = 0.2126 * _lin(r) + 0.7152 * _lin(gr) + 0.0722 * _lin(b)
+        # Schwarz oder Weiss mit dem hoeheren WCAG-Kontrast zur Malzfarbe.
+        text_color = "#ffffff" if 1.05 / (lum + 0.05) >= (lum + 0.05) / 0.05 else "#000000"
         row = {
             "number": i + 1,
             "name": g.malt_name,
             "kg": g.amount_kg,
             "color": color,
-            "text_color": "#2b2015" if 0.299 * r + 0.587 * gr + 0.114 * b > 150 else "#ffffff",
+            "text_color": text_color,
             "share_percent": None,
             "full_circle": False,
             "path": None,
             "label_x": None,
             "label_y": None,
+            "dx": 0.0,
+            "dy": 0.0,
         }
         kg = g.amount_kg or 0
         if total > 0 and kg > 0:
@@ -123,8 +133,11 @@ def grain_pie_rows(batch: Batch) -> list[dict]:
                     f"M{cx:.0f},{cy:.0f} L{x0:.2f},{y0:.2f} "
                     f"A{radius:.0f},{radius:.0f} 0 {1 if share > 0.5 else 0} 1 {x1:.2f},{y1:.2f} Z"
                 )
+            mid = angle + share * math.pi
+            if not row["full_circle"]:
+                row["dx"] = round(math.cos(mid), 3)  # Richtung zum Herausruecken beim Hover
+                row["dy"] = round(math.sin(mid), 3)
             if share >= 0.05:
-                mid = angle + share * math.pi
                 row["label_x"] = round(cx + radius * 0.62 * math.cos(mid), 2)
                 row["label_y"] = round(cy + radius * 0.62 * math.sin(mid), 2)
             angle += share * 2 * math.pi
