@@ -343,12 +343,71 @@ function updateHopSums() {
   setSums("hop", items);
 }
 
+// Karbonisierung: CO2 in g/L je Zeile (JS-Nachbau von formulas.keg_co2_g_per_l
+// bzw. priming_co2_g_per_l + residual_co2_g_per_l). Zeilen blenden je nach Art
+// (Zucker/Keg) die jeweils nicht benötigten Felder aus; ausgeblendete Felder
+// werden weiter mitgesendet (leer), damit die Spaltenlisten deckungsgleich bleiben.
+const CO2_G_PER_L_PER_VOL = 1.977;
+function kegCo2(pressureBar, tempC) {
+  const psiAbs = pressureBar * 14.5038 + 14.6959;
+  const tempF = (tempC * 9) / 5 + 32;
+  const vol = psiAbs * (0.01821 + 0.090115 * Math.exp(-(tempF - 32) / 43.11)) - 0.003342;
+  return Math.max(vol, 0) * CO2_G_PER_L_PER_VOL;
+}
+function residualCo2(tempC) {
+  const tempF = (tempC * 9) / 5 + 32;
+  const vol = 3.0378 - 0.050062 * tempF + 0.00026555 * tempF * tempF;
+  return Math.max(vol, 0) * CO2_G_PER_L_PER_VOL;
+}
+function updateCarbonation() {
+  const fermTempRaw = parseFloat(document.querySelector('input[name="carbonation_ferm_temp_c"]')?.value);
+  const assumed = !Number.isFinite(fermTempRaw);
+  const residual = residualCo2(assumed ? 20 : fermTempRaw);
+  document.querySelectorAll('tbody[data-rows="carb"] tr').forEach((row) => {
+    const kind = row.querySelector('select[name="carb_kind"]')?.value === "keg" ? "keg" : "zucker";
+    row.dataset.carbKind = kind;
+    const out = row.querySelector("[data-carb-co2]");
+    if (!out) return;
+    let text = "–";
+    let sub = "";
+    if (kind === "keg") {
+      const pressureRaw = row.querySelector('input[name="carb_pressure_bar"]')?.value;
+      const tempRaw = row.querySelector('input[name="carb_temperature_c"]')?.value;
+      if (pressureRaw !== "" && tempRaw !== "" && Number.isFinite(parseFloat(pressureRaw)) && Number.isFinite(parseFloat(tempRaw))) {
+        const co2 = kegCo2(parseFloat(pressureRaw), parseFloat(tempRaw));
+        text = `${fmtNum(co2, 1)} g/L`;
+        sub = `≈ ${fmtNum(co2 / CO2_G_PER_L_PER_VOL, 1)} Vol.`;
+      }
+    } else {
+      const sugar = numVal(row, "carb_sugar_g");
+      const bottle = numVal(row, "carb_bottle_l");
+      if (sugar > 0 && bottle > 0) {
+        const fromSugar = (sugar / bottle) * 0.5;
+        const total = fromSugar + residual;
+        text = `${fmtNum(total, 1)} g/L`;
+        sub = `Zucker ${fmtNum(fromSugar, 1)} + Rest ${fmtNum(residual, 1)}${assumed ? " (20 °C angenommen)" : ""} · ≈ ${fmtNum(total / CO2_G_PER_L_PER_VOL, 1)} Vol.`;
+      }
+    }
+    out.textContent = text;
+    let subEl = out.parentElement.querySelector(".carb-co2-sub");
+    if (!subEl) {
+      subEl = document.createElement("span");
+      subEl.className = "carb-co2-sub";
+      out.parentElement.append(subEl);
+    }
+    subEl.textContent = sub;
+  });
+}
+
 function updateSimpleSums() {
+  updateCarbonation();
   let dryHop = 0;
   document.querySelectorAll('tbody[data-rows="dryhop"] tr').forEach((row) => (dryHop += numVal(row, "dryhop_amount_g")));
   setSums("dryhop", [["Stopfhopfen gesamt", `${fmtNum(dryHop, 1)} g`]]);
   let sugar = 0;
-  document.querySelectorAll('tbody[data-rows="carb"] tr').forEach((row) => (sugar += numVal(row, "carb_sugar_g")));
+  document.querySelectorAll('tbody[data-rows="carb"] tr').forEach((row) => {
+    if (row.querySelector('select[name="carb_kind"]')?.value !== "keg") sugar += numVal(row, "carb_sugar_g");
+  });
   setSums("carb", [["Zucker gesamt", `${fmtNum(sugar, 1)} g`]]);
   let taskMin = 0;
   document.querySelectorAll('tbody[data-rows="task"] tr').forEach((row) => (taskMin += numVal(row, "task_duration_min")));
@@ -362,7 +421,7 @@ function updateFormSums() {
   updateSimpleSums();
 }
 document.addEventListener("input", (event) => {
-  if (event.target.closest("tbody[data-rows], input[name='target_volume_l']")) updateFormSums();
+  if (event.target.closest("tbody[data-rows], input[name='target_volume_l'], input[name='carbonation_ferm_temp_c']")) updateFormSums();
 });
 document.addEventListener("change", (event) => {
   if (event.target.closest("tbody[data-rows]")) updateFormSums();

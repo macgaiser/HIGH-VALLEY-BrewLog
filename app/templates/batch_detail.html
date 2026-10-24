@@ -216,13 +216,25 @@
       <h2><span>Karbonisierung</span><img class="step-icon" src="/static/img/step-abfuellen.png" alt=""></h2>
       <div class="table-scroll">
       <table class="mini-table">
-        {% for c in batch.carbonation_entries %}
-        <tr><td>{{ c.label }}</td><td>{{ c.sugar_g|fmt(1) }} g</td><td>je {{ c.bottle_volume_l|fmt(2) }} l Flasche</td></tr>
+        {% for r in carbonation.rows %}
+        {% set c = r.entry %}
+        <tr>
+          <td>{{ c.label }}</td>
+          {% if c.kind == "keg" %}
+          <td>{{ c.pressure_bar|fmt(2) }} bar bei {{ c.temperature_c|fmt(1) }} °C</td>
+          {% else %}
+          <td>{{ c.sugar_g|fmt(1) }} g je {{ c.bottle_volume_l|fmt(2) }} l Flasche</td>
+          {% endif %}
+          <td>{% if r.co2 is not none %}<strong>{{ r.co2|fmt(1) }} g/L</strong> <span class="stat-sub">≈ {{ r.vol|fmt(1) }} Vol.</span>{% else %}–{% endif %}</td>
+        </tr>
         {% else %}
         <tr><td colspan="3">–</td></tr>
         {% endfor %}
       </table>
       </div>
+      {% if carbonation.rows|selectattr("kind", "equalto", "zucker")|list %}
+      <p class="hint">CO₂ gesamt = aus dem Zucker gebildete CO₂ + Rest-CO₂ nach der Gärung ({{ carbonation.residual|fmt(1) }} g/L{% if carbonation.temp_assumed %}, angenommen bei 20 °C Gärtemperatur – unter „Bearbeiten“ anpassbar{% else %}, bei {{ carbonation.ferm_temp|fmt(0) }} °C höchster Gärtemperatur{% endif %}). Rechnung für Haushaltszucker.</p>
+      {% endif %}
     </section>
   </div>
 

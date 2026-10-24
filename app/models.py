@@ -175,6 +175,9 @@ class Batch(SQLModel, table=True):
     # Von Hand im Originalprotokoll eingetragene Werte, als Fallback für
     # Sude, bei denen die App IBU/Alkohol mangels Rohdaten (Alphasäure,
     # Gärverlauf) nicht selbst berechnen kann.
+    # Hoechste Temperatur nach der Gaerung - bestimmt, wie viel CO2 im Bier
+    # gelost bleibt (siehe formulas.residual_co2_g_per_l).
+    carbonation_ferm_temp_c: Optional[float] = None
     recorded_ibu: Optional[float] = None
     recorded_abv_text: Optional[str] = None
 
@@ -332,14 +335,18 @@ class DryHopAddition(SQLModel, table=True):
 
 
 class CarbonationEntry(SQLModel, table=True):
-    """Karbonisierung: Zucker je Flaschengröße."""
+    """Karbonisierung: entweder Zucker je Flaschengröße (kind="zucker") oder
+    Keg mit Enddruck bei Endtemperatur (kind="keg")."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
     batch_id: int = Field(foreign_key="batch.id")
     position: int = 0
+    kind: str = "zucker"
     sugar_g: float = 0
     bottle_volume_l: float = 0.5
     label: str = "Zucker"
+    pressure_bar: Optional[float] = None  # Keg: Enddruck (Ueberdruck am Manometer)
+    temperature_c: Optional[float] = None  # Keg: Endtemperatur
 
     batch: Batch = Relationship(back_populates="carbonation_entries")
 

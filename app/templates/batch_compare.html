@@ -97,7 +97,7 @@
     <tr>
       <td>Position {{ i + 1 }}</td>
       {% for b in selected %}
-      <td>{% if i < b.carbonation_entries|length %}{{ b.carbonation_entries[i].label }} – {{ b.carbonation_entries[i].sugar_g|fmt(1) }} g je {{ b.carbonation_entries[i].bottle_volume_l|fmt(2) }} l{% else %}–{% endif %}</td>
+      <td>{% if i < b.carbonation_entries|length %}{{ b.carbonation_entries[i].label }} – {% if b.carbonation_entries[i].kind == 'keg' %}{{ b.carbonation_entries[i].pressure_bar|fmt(2) }} bar bei {{ b.carbonation_entries[i].temperature_c|fmt(1) }} °C{% else %}{{ b.carbonation_entries[i].sugar_g|fmt(1) }} g je {{ b.carbonation_entries[i].bottle_volume_l|fmt(2) }} l{% endif %}{% else %}–{% endif %}</td>
       {% endfor %}
     </tr>
     {% else %}

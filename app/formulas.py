@@ -406,3 +406,45 @@ def ebc_to_hex(ebc: float) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
+
+
+# --- Karbonisierung -------------------------------------------------------
+# 1 Volumenanteil CO2 (bei 0 degC, 1 atm) entspricht ca. 1,977 g CO2 je Liter.
+CO2_G_PER_L_PER_VOL = 1.977
+# Gaerung von Haushaltszucker (Saccharose) liefert ca. 0,5 g CO2 je g Zucker
+# (Traubenzucker etwas weniger).
+SUGAR_CO2_YIELD_G_PER_G = 0.5
+# Annahme fuer die Rest-CO2, wenn keine Gaertemperatur eingetragen ist.
+DEFAULT_FERMENTATION_TEMP_C = 20.0
+
+
+def keg_co2_g_per_l(pressure_bar: float, temperature_c: float) -> float:
+    """Geloeste CO2-Menge (g/L) im Keg bei Gleichgewicht: Enddruck als
+    Ueberdruck (Manometer) in bar bei der Lagertemperatur in degC.
+
+    Gaengige Naeherung der CO2-Loeslichkeit (Volumenanteile, Druck in psi
+    absolut, Temperatur in degF):
+        Vol = P_abs * (0.01821 + 0.090115 * e^(-(T-32)/43.11)) - 0.003342
+    """
+    psi_abs = pressure_bar * 14.5038 + 14.6959
+    temp_f = temperature_c * 9 / 5 + 32
+    vol = psi_abs * (0.01821 + 0.090115 * math.exp(-(temp_f - 32) / 43.11)) - 0.003342
+    return max(vol, 0.0) * CO2_G_PER_L_PER_VOL
+
+
+def residual_co2_g_per_l(max_fermentation_temp_c: float) -> float:
+    """Nach der Gaerung noch geloeste CO2 (g/L), abhaengig von der hoechsten
+    Temperatur, die das Bier nach der Gaerung hatte:
+        Vol = 3.0378 - 0.050062 * T + 0.00026555 * T^2   (T in degF)
+    """
+    temp_f = max_fermentation_temp_c * 9 / 5 + 32
+    vol = 3.0378 - 0.050062 * temp_f + 0.00026555 * temp_f**2
+    return max(vol, 0.0) * CO2_G_PER_L_PER_VOL
+
+
+def priming_co2_g_per_l(sugar_g: float, volume_l: float) -> float:
+    """Durch Flaschengaerung neu gebildete CO2 (g/L) aus der Zuckergabe je
+    Flaschengroesse."""
+    if volume_l <= 0 or sugar_g <= 0:
+        return 0.0
+    return sugar_g / volume_l * SUGAR_CO2_YIELD_G_PER_G
