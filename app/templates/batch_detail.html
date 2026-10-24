@@ -147,7 +147,7 @@
     <tr>
       <td>{{ h.hop_name }}</td>
       <td>{{ h.alpha_acid_percent|fmt(1) }} %</td>
-      <td>{{ h.amount_g|fmt(0) }} g</td>
+      <td>{{ h.amount_g|fmt(1) }} g</td>
       <td>{{ h.time_min|fmt(0) }} min</td>
       <td>{{ h.addition_type.value }}</td>
       <td>{{ m.ibu_per_addition.get(h.id)|fmt(1) if m.ibu_per_addition.get(h.id) is not none else "–" }}</td>
@@ -204,7 +204,7 @@
       <div class="table-scroll">
       <table class="mini-table">
         {% for d in batch.dry_hop_additions %}
-        <tr><td>{{ d.hop_name }}</td><td>{{ d.timing_label }}</td><td>{{ d.amount_g|fmt(0) }} g</td></tr>
+        <tr><td>{{ d.hop_name }}</td><td>{{ d.timing_label }}</td><td>{{ d.amount_g|fmt(1) }} g</td></tr>
         {% else %}
         <tr><td colspan="3">–</td></tr>
         {% endfor %}
