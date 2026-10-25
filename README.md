@@ -157,8 +157,10 @@ python run.py
 ```
 
 Die Oberfläche ist danach unter `http://localhost:5000` erreichbar
-(Standard-Login: `admin` / `brewlog`, unbedingt über Umgebungsvariablen
-ändern).
+(Login über die Umgebungsvariablen `APP_USERNAME` (Standard `admin`) und
+`APP_PASSWORD` - **Pflicht**: ohne eigenes Passwort startet die App nicht.
+Für lokales Entwickeln: `export APP_PASSWORD=<passwort>` oder
+`APP_ALLOW_INSECURE_DEFAULTS=1`).
 
 ## Deployment auf der Synology NAS (Docker / Container Manager)
 
@@ -231,7 +233,8 @@ docker compose exec brewlog python scripts/link_inventory.py --apply    # verkn�
 komplette SQLite-Datenbank. Diesen Ordner bei Backups berücksichtigen.
 
 **Sicherheit:** Die Oberfläche ist nur per HTTP Basic Auth geschützt.
-Unbedingt `APP_USERNAME`/`APP_PASSWORD` auf sichere Werte setzen. Für einen
+`APP_PASSWORD` ist Pflicht (die App startet nicht mit den bekannten
+Beispielwerten wie `brewlog` oder `changeme`), `APP_USERNAME` optional. Für einen
 Zugriff aus dem Internet (nicht empfohlen) sollte zusätzlich eine
 Reverse-Proxy-Konfiguration mit HTTPS (z.B. über die Synology-eigene
 Reverse-Proxy-Funktion) und idealerweise VPN-Zugriff verwendet werden.
