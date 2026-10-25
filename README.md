@@ -275,6 +275,19 @@ Zugriff aus dem Internet (nicht empfohlen) sollte zusätzlich eine
 Reverse-Proxy-Konfiguration mit HTTPS (z.B. über die Synology-eigene
 Reverse-Proxy-Funktion) und idealerweise VPN-Zugriff verwendet werden.
 
+## Tests
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
+
+Die Tests (`tests/`) prüfen die Berechnungen (IBU, Bierfarbe, Alkohol, Kosten,
+Tortendiagramm) und laufen als Rauchtest durch die echte App (Anmeldung, die
+wichtigsten Seiten, Sud und Lagerartikel anlegen) - in einem Wegwerf-Ordner,
+nie auf echten Daten. Auf GitHub laufen sie bei jedem Pull Request automatisch
+(`.github/workflows/tests.yml`).
+
 **CSRF-Schutz:** Ändernde Anfragen (POST usw.) werden nur akzeptiert, wenn sie von
 der App selbst kommen (Origin-/Referer-Prüfung gegen den Host der Anfrage, auch
 hinter einem Reverse-Proxy per `X-Forwarded-Host`). Hängt die App an einer
