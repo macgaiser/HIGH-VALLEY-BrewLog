@@ -1,0 +1,43 @@
+name: Fehler melden
+description: Etwas funktioniert nicht oder rechnet falsch
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für deine Meldung! **Bitte keine Passwörter, Zugangsdaten oder persönliche Daten** in Beschreibung, Logs oder Screenshots posten.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Steht in der Fußzeile der App (z. B. v0.1.0-beta oder ein Commit-Kürzel).
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Wie läuft die App?
+      options:
+        - Docker (docker-compose)
+        - Lokal mit Python
+        - Anders
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Was hast du gemacht?
+      description: Schritte, um den Fehler nachzustellen.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Was hast du erwartet, was ist passiert?
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Zusätzliches (optional)
+      description: Browser/Gerät, Screenshots, Fehlermeldung aus dem Log (`docker compose logs brewlog`) - ohne Zugangsdaten.
