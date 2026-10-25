@@ -1,4 +1,6 @@
 import os
+import shutil
+import uuid
 from datetime import date
 from pathlib import Path
 
@@ -129,6 +131,41 @@ def init_db() -> None:
 
         _fix_hop_alpha_fractions(session)
         _auto_lock_old_costs(session)
+        _keep_legacy_label_logo(session)
+
+
+_LABEL_LOGO_MARKER = DATA_DIR / ".migrated-label-logo-v1"
+
+
+def _keep_legacy_label_logo(session: Session) -> None:
+    """Einmalige Uebernahme fuer Bestandsinstallationen: Das eingebaute
+    Standard-Logo des Etikettengenerators war frueher das Wappen und ist jetzt
+    der neutrale Bierkrug. Wer bisher kein eigenes Logo aktiv hatte (also das
+    eingebaute Wappen auf seinen Etiketten nutzte), behaelt sein Aussehen: das
+    Wappen wird als hochgeladenes Logo angelegt und als Standard gesetzt.
+    Frische Installationen (noch keine Sude) bekommen den Bierkrug. Laeuft
+    genau einmal (Marker-Datei im Datenordner)."""
+    from app.models import Batch, Logo, Settings
+
+    if _LABEL_LOGO_MARKER.exists():
+        return
+    settings = session.get(Settings, 1)
+    existing_install = session.exec(select(Batch)).first() is not None
+    legacy_shield = Path(__file__).parent / "static" / "img" / "logo-shield.png"
+    if settings and settings.active_logo_id is None and existing_install and legacy_shield.exists():
+        stored_name = f"{uuid.uuid4().hex}.png"
+        shutil.copyfile(legacy_shield, LOGO_DIR / stored_name)
+        logo = Logo(
+            filename=stored_name,
+            original_filename="logo-shield.png",
+            scale_percent=settings.default_logo_scale,
+        )
+        session.add(logo)
+        session.flush()
+        settings.active_logo_id = logo.id
+        session.add(settings)
+        session.commit()
+    _LABEL_LOGO_MARKER.write_text("Einmalige Logo-Uebernahme erledigt - Datei nicht loeschen.\n")
 
 
 def _fix_hop_alpha_fractions(session: Session) -> None:
