@@ -1,0 +1,18 @@
+# GitHub öffnet automatisch Pull Requests, wenn Pakete, das Docker-Basis-Image
+# oder GitHub-Actions veraltet oder unsicher sind. Die Tests (tests.yml)
+# prüfen jeden dieser Vorschläge.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

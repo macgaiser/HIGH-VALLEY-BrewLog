@@ -1,0 +1,19 @@
+name: Wunsch / Idee
+description: Eine Funktion, die dir fehlt oder besser sein könnte
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Was möchtest du tun, was geht heute nicht (gut)?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Wie stellst du dir die Lösung vor? (optional)
+  - type: textarea
+    id: extra
+    attributes:
+      label: Zusätzliches (optional)
+      description: Beispiele, Screenshots, Vergleich mit anderer Brausoftware.
