@@ -2,9 +2,11 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.auth import get_current_user
+from app.auth import get_current_user, require_secure_credentials
 from app.database import BACKGROUND_IMAGE_DIR, BORDER_GRAPHIC_DIR, LOGO_DIR, init_db
 from app.routers import batches, inventory, settings, statistics
+
+require_secure_credentials()
 
 app = FastAPI(title="HIGH VALLEY BrewLog")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
