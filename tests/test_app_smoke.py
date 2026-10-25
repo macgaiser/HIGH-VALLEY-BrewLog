@@ -67,3 +67,20 @@ def test_sud_anlegen_ansehen_und_etikett(client):
     assert label.status_code == 200 and "Rauchtest-Sud" in label.text
     assert client.get("/batches/1/edit", auth=AUTH).status_code == 200
     assert client.get("/statistics", auth=AUTH).status_code == 200
+
+
+def test_neuer_sud_hinweis_nennt_die_tage_fuer_automatisches_einfrieren(client):
+    from app.batch_calc import AUTO_LOCK_AGE_DAYS
+
+    text = client.get("/batches/new", auth=AUTH).text
+    assert f"Brautag-Alter von {AUTO_LOCK_AGE_DAYS} Tagen" in text
+
+
+def test_vorlage_brautag_zeitplan_hat_keine_zeiten(client):
+    import re
+
+    for path in ("/batches/new", "/settings"):
+        text = client.get(path, auth=AUTH).text
+        werte = re.findall(r'name="task_duration_min" value="([^"]*)"', text)
+        assert werte, f"keine Zeitplan-Zeilen auf {path}"
+        assert all(w == "" for w in werte), f"Zeiten in der Vorlage auf {path}: {werte}"

@@ -240,7 +240,7 @@
         <tr>
           <td class="row-move"><button class="btn btn-small" type="button" data-move-up title="Nach oben">▲</button><button class="btn btn-small" type="button" data-move-down title="Nach unten">▼</button></td>
           <td><input type="text" name="task_name" value="{{ t.task_name }}"></td>
-          <td><input type="number" step="1" name="task_duration_min" value="{{ t.planned_duration_min }}"></td>
+          <td><input type="number" step="1" name="task_duration_min" value="{{ t.planned_duration_min if t.planned_duration_min is not none else '' }}"></td>
           <td><input type="text" name="task_note" value="{{ t.note }}"></td>
           <td><button class="btn btn-small" data-remove-row>✕</button></td>
         </tr>

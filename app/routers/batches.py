@@ -269,6 +269,7 @@ def batch_new_form(request: Request, session: Session = Depends(get_session)):
             "inventory": _inventory_options(session),
             "hop_types": list(HopAdditionType),
             "ebc_color_table": formulas.ebc_color_table(),
+            "auto_lock_age_days": AUTO_LOCK_AGE_DAYS,
             "beer_styles": beer_styles,
             "water_profiles": water_profiles,
         },
