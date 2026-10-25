@@ -15,7 +15,8 @@ services:
       - ./data:/data
     environment:
       APP_USERNAME: ${APP_USERNAME:-admin}
-      APP_PASSWORD: ${APP_PASSWORD:-changeme}
+      # Pflicht: ohne eigenes Passwort startet die App nicht (siehe .env.example).
+      APP_PASSWORD: ${APP_PASSWORD:?Bitte APP_PASSWORD in der .env setzen}
     # Nur relevant, wenn zusaetzlich docker-compose.watchtower.yml genutzt wird.
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
