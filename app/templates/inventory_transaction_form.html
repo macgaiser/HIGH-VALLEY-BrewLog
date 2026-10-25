@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Buchung bearbeiten – {{ item.name }} – HIGH VALLEY BrewLog{% endblock %}
+{% block content %}
+<h1>Buchung bearbeiten – {{ item.name }}</h1>
+<form class="card" method="post" action="/inventory/{{ item.id }}/transactions/{{ tx.id }}/edit">
+  <div class="field-row">
+    <div>
+      <label>Datum / Uhrzeit</label>
+      <input type="datetime-local" name="created_at" value="{{ tx.created_at.strftime('%Y-%m-%dT%H:%M') }}" required>
+    </div>
+    <div>
+      <label>Menge ({{ item.unit }}, + Zugang / − Abgang)</label>
+      <input type="number" step="0.01" name="delta" value="{{ tx.delta }}" required>
+    </div>
+  </div>
+  <label style="margin-top: 0.8rem;">Notiz</label>
+  <input type="text" name="note" value="{{ tx.note }}">
+  <p class="hint">Eine geänderte Menge korrigiert den aktuellen Bestand ({{ item.amount|round(2) }} {{ item.unit }}) um die Differenz zur bisherigen Buchung ({{ "%+.2f"|format(tx.delta) }} {{ item.unit }}).</p>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Speichern</button>
+    <a class="btn" href="/inventory/{{ item.id }}">Abbrechen</a>
+  </div>
+</form>
+<form method="post" action="/inventory/{{ item.id }}/transactions/{{ tx.id }}/delete" onsubmit="return confirm('Buchung wirklich löschen? Der Bestand wird um {{ '%+.2f'|format(-tx.delta) }} {{ item.unit }} korrigiert.')" style="margin-top: 1rem;">
+  <button class="btn btn-danger" type="submit">Buchung löschen</button>
+</form>
+{% endblock %}

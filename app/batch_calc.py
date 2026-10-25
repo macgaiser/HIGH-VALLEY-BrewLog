@@ -82,6 +82,31 @@ def grain_color_ebc(g) -> float | None:
     return g.color_ebc
 
 
+CARBONATION_NAMES = {"zucker": "Haushaltszucker", "traubenzucker": "Traubenzucker", "keg": "Keg"}
+
+
+def carbonation_rows(batch: Batch) -> dict:
+    """Karbonisierung fuer die Sud-Ansicht: je Eintrag die CO2-Menge in g/L.
+    Keg: aus Enddruck und Endtemperatur. Zucker: durch den Zucker neu
+    gebildete CO2 plus die nach der Gaerung noch geloeste Rest-CO2 (abhaengig
+    von der hoechsten Gaertemperatur, ohne Eintrag wird 20 degC angenommen)."""
+    ferm_temp = batch.carbonation_ferm_temp_c
+    assumed = ferm_temp is None
+    residual = formulas.residual_co2_g_per_l(formulas.DEFAULT_FERMENTATION_TEMP_C if assumed else ferm_temp)
+    rows = []
+    for c in sorted(batch.carbonation_entries, key=lambda e: e.position):
+        row = {"entry": c, "kind": c.kind, "name": CARBONATION_NAMES.get(c.kind, c.label), "co2": None, "sugar_part": None, "abv_add": None}
+        if c.kind == "keg":
+            if c.pressure_bar is not None and c.temperature_c is not None:
+                row["co2"] = formulas.keg_co2_g_per_l(c.pressure_bar, c.temperature_c)
+        else:
+            row["sugar_part"] = formulas.priming_co2_g_per_l(c.sugar_g or 0, c.bottle_volume_l or 0, c.kind)
+            row["co2"] = row["sugar_part"] + residual
+            row["abv_add"] = formulas.priming_abv_percent(c.sugar_g or 0, c.bottle_volume_l or 0, c.kind)
+        rows.append(row)
+    return {"rows": rows, "residual": residual, "ferm_temp": ferm_temp, "temp_assumed": assumed}
+
+
 def grain_pie_rows(batch: Batch) -> list[dict]:
     """Schuettung fuer die Sud-Ansicht: Tabellenzeilen (nach Menge absteigend,
     mit laufender Nummer) samt Tortenstueck-Geometrie fuer das Inline-SVG

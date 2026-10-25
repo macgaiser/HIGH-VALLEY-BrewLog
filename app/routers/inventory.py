@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.inventory import restock
-from app.models import InventoryCategory, InventoryItem, Settings
+from app.models import InventoryCategory, InventoryItem, InventoryTransaction, Settings
 from app.templating import templates
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
@@ -101,7 +101,7 @@ async def inventory_create(request: Request, session: Session = Depends(get_sess
     initial_amount = float(form.get("initial_amount") or 0)
     if initial_amount > 0:
         restock(session, item, initial_amount, note="Anfangsbestand")
-    return RedirectResponse("/inventory", status_code=303)
+    return RedirectResponse(f"/inventory/{item.id}", status_code=303)
 
 
 @router.get("/{item_id}/edit")
@@ -128,7 +128,7 @@ async def inventory_update(item_id: int, request: Request, session: Session = De
     item.price = new_price
     session.add(item)
     session.commit()
-    return RedirectResponse("/inventory", status_code=303)
+    return RedirectResponse(f"/inventory/{item_id}", status_code=303)
 
 
 @router.post("/{item_id}/restock")
@@ -147,7 +147,74 @@ async def inventory_restock(item_id: int, request: Request, session: Session = D
 
             session.add(InventoryTransaction(item_id=item.id, delta=amount, note=note or "Korrektur"))
             session.commit()
-    return RedirectResponse("/inventory", status_code=303)
+    return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+
+def _manual_transaction(session: Session, item_id: int, tx_id: int) -> InventoryTransaction | None:
+    """Nur manuelle Buchungen (ohne Sud) sind hier anpassbar - Buchungen aus
+    einem Sud werden beim Speichern des Suds automatisch neu erzeugt und
+    muessten dort geaendert werden."""
+    tx = session.get(InventoryTransaction, tx_id)
+    if not tx or tx.item_id != item_id or tx.batch_id is not None:
+        return None
+    return tx
+
+
+@router.get("/{item_id}/transactions/{tx_id}/edit")
+def inventory_transaction_edit_form(item_id: int, tx_id: int, request: Request, session: Session = Depends(get_session)):
+    item = session.get(InventoryItem, item_id)
+    tx = _manual_transaction(session, item_id, tx_id)
+    if not item or not tx:
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+    return templates.TemplateResponse(
+        "inventory_transaction_form.html", {"request": request, "item": item, "tx": tx}
+    )
+
+
+@router.post("/{item_id}/transactions/{tx_id}/edit")
+async def inventory_transaction_update(item_id: int, tx_id: int, request: Request, session: Session = Depends(get_session)):
+    """Menge, Notiz und Datum einer manuellen Buchung aendern. Der Bestand
+    wird um die Differenz zur bisherigen Menge korrigiert."""
+    form = await request.form()
+    item = session.get(InventoryItem, item_id)
+    tx = _manual_transaction(session, item_id, tx_id)
+    if not item or not tx:
+        return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+    raw_delta = (form.get("delta") or "").strip().replace(",", ".")
+    try:
+        new_delta = float(raw_delta)
+    except ValueError:
+        new_delta = 0.0
+    if new_delta == 0:
+        return RedirectResponse(f"/inventory/{item_id}/transactions/{tx_id}/edit", status_code=303)
+
+    item.amount += new_delta - tx.delta
+    item.updated_at = datetime.utcnow()
+    tx.delta = new_delta
+    tx.note = (form.get("note") or "").strip()
+    try:
+        tx.created_at = datetime.strptime((form.get("created_at") or "").strip(), "%Y-%m-%dT%H:%M")
+    except ValueError:
+        pass
+    session.add(item)
+    session.add(tx)
+    session.commit()
+    return RedirectResponse(f"/inventory/{item_id}", status_code=303)
+
+
+@router.post("/{item_id}/transactions/{tx_id}/delete")
+def inventory_transaction_delete(item_id: int, tx_id: int, session: Session = Depends(get_session)):
+    """Manuelle Buchung loeschen - ihre Wirkung auf den Bestand wird rueckgaengig gemacht."""
+    item = session.get(InventoryItem, item_id)
+    tx = _manual_transaction(session, item_id, tx_id)
+    if item and tx:
+        item.amount -= tx.delta
+        item.updated_at = datetime.utcnow()
+        session.add(item)
+        session.delete(tx)
+        session.commit()
+    return RedirectResponse(f"/inventory/{item_id}", status_code=303)
 
 
 @router.post("/{item_id}/delete")
