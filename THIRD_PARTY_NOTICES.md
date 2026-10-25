@@ -46,6 +46,13 @@ Lizenzen liegen den jeweiligen Paketen bei.
 ## Bilder und Marke
 
 Die Bilder unter `app/static/img/` und `app/static/icons/` (Wappen,
-Schritt-Illustrationen, Hintergrund, App-Icons) sowie Name und Wappen
-"HIGH VALLEY" sind **nicht** Teil der Quellcode-Lizenz; alle Rechte daran
-liegen beim Urheber bzw. Rechteinhaber.
+Schritt-Illustrationen, Hintergrund, App-Icons) sind selbst erstellt;
+Rechteinhaber ist macgaiser. Sie sowie Name und Wappen "HIGH VALLEY" sind
+**nicht** Teil der Quellcode-Lizenz (`LICENSE`): alle Rechte vorbehalten.
+Sie dürfen als Teil der unveränderten Anwendung beim Selbst-Hosting
+mitverwendet werden; jede darüber hinausgehende Nutzung (insbesondere von
+Name und Wappen als Marke für eigene Produkte oder Dienste) bedarf der
+Zustimmung des Rechteinhabers.
+
+Der voreingestellte Etikett-Bierkrug (`app/static/img/label-default-mug.svg`)
+ist dieselbe selbst erstellte Zeichnung wie das Krug-Symbol der EBC-Anzeige.
