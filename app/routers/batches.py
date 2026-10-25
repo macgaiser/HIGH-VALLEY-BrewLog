@@ -806,7 +806,7 @@ def batch_label(batch_id: int, request: Request, session: Session = Depends(get_
     # (None = Standard folgen, 0 = bewusst eingebaut/keins, siehe Batch.label_*).
     logo_id = batch.label_logo_id if batch.label_logo_id is not None else settings.active_logo_id
     logo = logos_by_id.get(logo_id) if logo_id else None
-    logo_url = f"/logos/{logo.filename}" if logo else "/static/img/logo-shield.png"
+    logo_url = f"/logos/{logo.filename}" if logo else "/static/img/label-default-mug.svg"
     logo_scale = logo.scale_percent if logo else settings.default_logo_scale
 
     # Keine eingebaute Standardgrafik (frueher eine Hopfenranke) - die war
@@ -851,7 +851,7 @@ def batch_label(batch_id: int, request: Request, session: Session = Depends(get_
             "logos": logos,
             "border_graphics": border_graphics,
             "background_images": background_images,
-            "default_logo_url": f"/logos/{default_logo.filename}" if default_logo else "/static/img/logo-shield.png",
+            "default_logo_url": f"/logos/{default_logo.filename}" if default_logo else "/static/img/label-default-mug.svg",
             "default_border_graphic_url": f"/border-graphics/{default_graphic.filename}" if default_graphic else None,
             "default_background_url": (
                 f"/background-images/{default_background.filename}" if default_background else "/static/img/bg-valley.png"
