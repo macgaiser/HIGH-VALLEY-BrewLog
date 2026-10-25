@@ -9,6 +9,9 @@ COPY app ./app
 COPY scripts ./scripts
 COPY run.py .
 
+# Lizenztexte gehoeren zum ausgelieferten Image (u.a. die Bild-Lizenz).
+COPY LICENSE LICENSE-ASSETS.md THIRD_PARTY_NOTICES.md ./
+
 # Versionsangabe des gebauten Stands, fuer die Versionsanzeige in der
 # Fusszeile (siehe app/templating.py) - ein Versions-Tag (z.B. "v1.0.0"),
 # falls der gebaute Commit eins traegt, sonst die volle Commit-SHA. Wird

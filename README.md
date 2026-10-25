@@ -270,6 +270,11 @@ Alle Routen (außer `/healthz`) erfordern HTTP Basic Auth.
 
 ## Lizenz
 
+**Bilder, Logos, Symbole und die Marke "HIGH VALLEY" sind nicht Teil dieser
+Lizenz:** alle Rechte vorbehalten, keine Weitergabe oder Weiterverwendung -
+siehe [LICENSE-ASSETS.md](LICENSE-ASSETS.md). Forks müssen sie durch eigene
+Bilder ersetzen.
+
 Mitgelieferte Schriften und Bibliotheken von Drittanbietern (Roboto, Ranchers,
 Chart.js, flatpickr) stehen unter eigenen Lizenzen - siehe
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
