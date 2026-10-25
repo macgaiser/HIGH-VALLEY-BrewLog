@@ -6,6 +6,7 @@ from app.auth import get_current_user, require_secure_credentials
 from app.database import BACKGROUND_IMAGE_DIR, BORDER_GRAPHIC_DIR, LOGO_DIR, init_db
 from app.routers import batches, inventory, settings, statistics
 
+
 class UploadedFiles(StaticFiles):
     """Auslieferung hochgeladener Bilder mit Sicherheits-Headern: Auch ein
     hochgeladenes SVG mit eingebettetem Skript wird dadurch nicht ausgefuehrt,
@@ -18,7 +19,6 @@ class UploadedFiles(StaticFiles):
         response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response
-
 
 
 require_secure_credentials()
