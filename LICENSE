@@ -5,6 +5,10 @@ Parameters
 Licensor:             macgaiser
 Licensed Work:        HIGH VALLEY BrewLog Version 1.0.0 or later.
                       The Licensed Work is (c) 2026 macgaiser.
+                      Excluded from the Licensed Work: the images, logos,
+                      icons, illustrations and brand marks listed in
+                      LICENSE-ASSETS.md, which are not licensed under this
+                      License (all rights reserved).
 Additional Use Grant: You may use, copy, modify, and self-host the Licensed
                       Work, including via Docker or any other local or
                       containerized deployment, free of charge and for any

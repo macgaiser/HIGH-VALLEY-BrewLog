@@ -1,0 +1,3 @@
+(c) 2026 macgaiser - Alle Rechte vorbehalten / All rights reserved.
+Diese Bilder duerfen nicht kopiert, weitergegeben oder weiterverwendet werden.
+Siehe LICENSE-ASSETS.md im Repository bzw. im Image (/app/LICENSE-ASSETS.md).
