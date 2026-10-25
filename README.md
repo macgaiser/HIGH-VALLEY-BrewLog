@@ -249,6 +249,13 @@ wichtigsten Seiten, Sud und Lagerartikel anlegen) - in einem Wegwerf-Ordner,
 nie auf echten Daten. Auf GitHub laufen sie bei jedem Pull Request automatisch
 (`.github/workflows/tests.yml`).
 
+**CSRF-Schutz:** Ändernde Anfragen (POST usw.) werden nur akzeptiert, wenn sie von
+der App selbst kommen (Origin-/Referer-Prüfung gegen den Host der Anfrage, auch
+hinter einem Reverse-Proxy per `X-Forwarded-Host`). Hängt die App an einer
+anderen als der aufgerufenen Adresse, lassen sich zusätzliche Hosts über die
+Umgebungsvariable `APP_TRUSTED_ORIGINS` (kommagetrennt, z.B.
+`brew.example.com`) erlauben.
+
 ## Projektstruktur
 
 ```

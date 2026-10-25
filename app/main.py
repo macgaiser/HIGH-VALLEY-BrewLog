@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from app.auth import get_current_user
 from app.database import BACKGROUND_IMAGE_DIR, BORDER_GRAPHIC_DIR, LOGO_DIR, init_db
 from app.routers import batches, inventory, settings, statistics
+from app.csrf import csrf_origin_check
 
 app = FastAPI(title="HIGH VALLEY BrewLog")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -42,3 +43,4 @@ app.include_router(batches.router, dependencies=[Depends(get_current_user)])
 app.include_router(inventory.router, dependencies=[Depends(get_current_user)])
 app.include_router(statistics.router, dependencies=[Depends(get_current_user)])
 app.include_router(settings.router, dependencies=[Depends(get_current_user)])
+app.middleware("http")(csrf_origin_check)
