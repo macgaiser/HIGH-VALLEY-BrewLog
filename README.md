@@ -275,6 +275,22 @@ Zugriff aus dem Internet (nicht empfohlen) sollte zusätzlich eine
 Reverse-Proxy-Konfiguration mit HTTPS (z.B. über die Synology-eigene
 Reverse-Proxy-Funktion) und idealerweise VPN-Zugriff verwendet werden.
 
+### Als App installieren (PWA)
+
+BrewLog lässt sich wie eine App auf dem Handy oder Computer installieren
+(eigenes Symbol, Vollbild ohne Browserleiste). Dafür bietet der Browser die
+Installation aber nur an, wenn die Seite über **HTTPS** (oder auf demselben
+Rechner über `localhost`) aufgerufen wird. Unter einer reinen
+`http://<IP-Adresse>:Port`-Adresse im Heimnetz erscheint **kein**
+Installationsangebot - die App funktioniert dort trotzdem ganz normal im
+Browser (ein Lesezeichen oder "Zum Startbildschirm hinzufügen" des Geräts
+geht je nach Browser weiterhin).
+
+Für die Installation einen Reverse-Proxy mit HTTPS-Zertifikat vorschalten (z.B.
+die Reverse-Proxy-Funktion der Synology mit einem Zertifikat) und die App
+darüber aufrufen - siehe auch den Hinweis zu `APP_TRUSTED_ORIGINS` unter
+"Sicherheit".
+
 ## Tests
 
 ```bash
