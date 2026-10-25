@@ -90,20 +90,23 @@ _DEFAULT_BEER_STYLES = [
 ]
 
 
+# Vorlage fuer neue Installationen: nur die Tätigkeiten, bewusst OHNE Zeiten -
+# die Dauer ist von Brauanlage und Arbeitsweise abhängig und wird je Sud bzw.
+# unter Einstellungen eingetragen.
 _DEFAULT_BREW_DAY_TASKS = [
-    ("Vorbereiten + Schroten", 20, ""),
-    ("Eingemeischt", 25, ""),
-    ("Läutern + Hopfen vorbereiten", 40, ""),
+    ("Vorbereiten + Schroten", None, ""),
+    ("Eingemeischt", None, ""),
+    ("Läutern + Hopfen vorbereiten", None, ""),
     ("Malzrohr putzen", None, ""),
-    ("Hopfengaben", 10, ""),
+    ("Hopfengaben", None, ""),
     ("Kühlung aufbauen", None, ""),
-    ("Whirlpool und abkühlen", 20, ""),
-    ("Abfüllen, putzen", 40, ""),
-    ("Schläuche aufräumen, putzen", 15, ""),
-    ("Keg reinigen", 15, ""),
-    ("In Keg abfüllen", 55, ""),
-    ("Flaschen abfüllen", 40, ""),
-    ("Rezept vorbereiten", 20, ""),
+    ("Whirlpool und abkühlen", None, ""),
+    ("Abfüllen, putzen", None, ""),
+    ("Schläuche aufräumen, putzen", None, ""),
+    ("Keg reinigen", None, ""),
+    ("In Keg abfüllen", None, ""),
+    ("Flaschen abfüllen", None, ""),
+    ("Rezept vorbereiten", None, ""),
 ]
 
 
