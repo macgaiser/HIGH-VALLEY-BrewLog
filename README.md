@@ -275,6 +275,13 @@ Zugriff aus dem Internet (nicht empfohlen) sollte zusätzlich eine
 Reverse-Proxy-Konfiguration mit HTTPS (z.B. über die Synology-eigene
 Reverse-Proxy-Funktion) und idealerweise VPN-Zugriff verwendet werden.
 
+**CSRF-Schutz:** Ändernde Anfragen (POST usw.) werden nur akzeptiert, wenn sie von
+der App selbst kommen (Origin-/Referer-Prüfung gegen den Host der Anfrage, auch
+hinter einem Reverse-Proxy per `X-Forwarded-Host`). Hängt die App an einer
+anderen als der aufgerufenen Adresse, lassen sich zusätzliche Hosts über die
+Umgebungsvariable `APP_TRUSTED_ORIGINS` (kommagetrennt, z.B.
+`brew.example.com`) erlauben.
+
 ## Projektstruktur
 
 ```
