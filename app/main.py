@@ -6,13 +6,28 @@ from app.auth import get_current_user, require_secure_credentials
 from app.database import BACKGROUND_IMAGE_DIR, BORDER_GRAPHIC_DIR, LOGO_DIR, init_db
 from app.routers import batches, inventory, settings, statistics
 
+
+class UploadedFiles(StaticFiles):
+    """Auslieferung hochgeladener Bilder mit Sicherheits-Headern: Auch ein
+    hochgeladenes SVG mit eingebettetem Skript wird dadurch nicht ausgefuehrt,
+    wenn es direkt im Browser geoeffnet wird (CSP sandbox, kein Skript,
+    kein MIME-Sniffing). Als Bild (<img>) eingebunden fuehrt der Browser
+    SVG-Skripte ohnehin nie aus."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+
 require_secure_credentials()
 
 app = FastAPI(title="HIGH VALLEY BrewLog")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-app.mount("/logos", StaticFiles(directory=LOGO_DIR), name="logos")
-app.mount("/border-graphics", StaticFiles(directory=BORDER_GRAPHIC_DIR), name="border-graphics")
-app.mount("/background-images", StaticFiles(directory=BACKGROUND_IMAGE_DIR), name="background-images")
+app.mount("/logos", UploadedFiles(directory=LOGO_DIR), name="logos")
+app.mount("/border-graphics", UploadedFiles(directory=BORDER_GRAPHIC_DIR), name="border-graphics")
+app.mount("/background-images", UploadedFiles(directory=BACKGROUND_IMAGE_DIR), name="background-images")
 
 
 @app.on_event("startup")
