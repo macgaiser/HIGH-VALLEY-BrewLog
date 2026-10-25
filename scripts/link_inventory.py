@@ -103,12 +103,12 @@ def main() -> None:
         print(f"{'Verknüpft' if args.apply else 'Würde verknüpft (Vorschau, --apply zum Ausführen)'}: {linked}")
 
         if ambiguous:
-            print(f"\nMehrdeutig (mehrere Lagerartikel mit gleichem Namen), übersprungen:")
+            print("\nMehrdeutig (mehrere Lagerartikel mit gleichem Namen), übersprungen:")
             for name, count in sorted(ambiguous.items()):
                 print(f"  {name} ({count}x)")
 
         if no_match:
-            print(f"\nKein passender Lagerartikel gefunden, übersprungen:")
+            print("\nKein passender Lagerartikel gefunden, übersprungen:")
             for name, count in sorted(no_match.items()):
                 print(f"  {name} ({count}x)")
 
