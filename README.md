@@ -270,6 +270,10 @@ Alle Routen (außer `/healthz`) erfordern HTTP Basic Auth.
 
 ## Lizenz
 
+Mitgelieferte Schriften und Bibliotheken von Drittanbietern (Roboto, Ranchers,
+Chart.js, flatpickr) stehen unter eigenen Lizenzen - siehe
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 Der Quellcode steht unter der [Business Source License 1.1](LICENSE)
 (BSL) - er ist frei einsehbar und darf kostenlos selbst gehostet werden
 (auch per Docker), inkl. Veränderung für den eigenen Gebrauch. Nicht
