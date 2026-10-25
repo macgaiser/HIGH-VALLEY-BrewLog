@@ -1,0 +1,23 @@
+# OPTIONAL - automatische Updates mit Watchtower (nicht fuer Beta-Tester gedacht).
+#
+# Watchtower prueft regelmaessig, ob auf ghcr.io ein neueres Image liegt, und
+# aktualisiert den brewlog-Container dann automatisch (Container neu ziehen +
+# neu starten). Ueberwacht wegen "--label-enable" nur Container mit dem Label
+# aus docker-compose.yml, fasst also keine anderen Container an.
+#
+# ACHTUNG: Watchtower braucht Zugriff auf den Docker-Socket und damit
+# praktisch Root-Rechte auf dem Host - nur auf eigenen, vertrauenswuerdigen
+# Systemen einsetzen. Es zieht ausserdem immer den neuesten Stand (latest);
+# fuer eine feste Version BREWLOG_VERSION in der .env setzen und Watchtower
+# weglassen.
+#
+# Start (zusammen mit docker-compose.yml):
+#   docker compose -f docker-compose.yml -f docker-compose.watchtower.yml up -d
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: highvalley-brewlog-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --label-enable --interval 300 --cleanup

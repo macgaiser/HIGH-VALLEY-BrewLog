@@ -1,5 +1,11 @@
 # HIGH VALLEY BrewLog
 
+> **Beta-Version.** Die App befindet sich in der Beta: Funktionen und
+> Datenbankstruktur können sich noch ändern - vor jedem Update `./data`
+> sichern (siehe [Backup](#version-wählen-und-updates-einspielen)). Alle
+> Berechnungen (IBU, Alkohol, Bierfarbe, CO₂, Kosten) sind Näherungen und
+> ersetzen keine eigene Messung; Nutzung auf eigene Verantwortung, ohne Gewähr.
+
 Web-App für das Brauprotokoll (ehemals Excel), Lagerbestandsverwaltung
 (Malz/Hopfen/Hefe) und Rezeptkennzahlen. Läuft als Docker-Container, z.B.
 auf einer Synology NAS, und ist von jedem Gerät im Netzwerk per Browser
@@ -163,8 +169,8 @@ Die Oberfläche ist danach unter `http://localhost:5000` erreichbar
 ## Deployment auf der Synology NAS (Docker / Container Manager)
 
 `docker-compose.yml` nutzt standardmäßig ein fertiges Image von GitHub
-(`ghcr.io/macgaiser/highvalley-brewlog:latest`) statt lokal aus dem Code zu
-bauen. Auf der NAS wird also nur die `docker-compose.yml` (und `.env`)
+(`ghcr.io/macgaiser/highvalley-brewlog`, Version wählbar über
+`BREWLOG_VERSION`, siehe unten) statt lokal aus dem Code zu bauen. Auf der NAS wird also nur die `docker-compose.yml` (und `.env`)
 benötigt, kein vollständiges Repository.
 
 1. Nur die Datei `docker-compose.yml` (z.B. per File Station) in einen
@@ -182,14 +188,44 @@ benötigt, kein vollständiges Repository.
 4. Die App ist danach unter `http://<NAS-IP>:5050` erreichbar (Port ist in
    `docker-compose.yml` frei anpassbar).
 
-### Automatische Updates bei neuem Code
+### Version wählen und Updates einspielen
 
-`docker-compose.yml` startet neben der App auch **Watchtower**, das alle 5
-Minuten prüft, ob auf GitHub ein neueres Image liegt, und den Container bei
-Bedarf automatisch neu zieht und neu startet - danach ist auf der NAS
-nichts weiter zu tun.
+Ohne Angabe läuft immer der **neueste Stand** (`latest`). Für Tester (und
+alle, die keine halbfertigen Änderungen wollen) ist eine **feste Version**
+besser: in der `.env` z.B. `BREWLOG_VERSION=v0.1.0-beta` setzen (verfügbare
+Versionen: Reiter *Releases* bzw. *Packages* auf GitHub). Ein Update ist dann
+eine bewusste Entscheidung:
 
-Der Ablauf dahinter:
+```bash
+# 1. Daten sichern (siehe "Backup" unten)
+# 2. neue Version in der .env eintragen, dann:
+docker compose pull
+docker compose up -d
+```
+
+**Backup:** Vor jedem Update den kompletten Ordner `./data` kopieren (enthält
+die SQLite-Datenbank und hochgeladene Bilder), z.B.
+`cp -r data data-backup-$(date +%F)`. Zurückgehen: Container stoppen
+(`docker compose down`), den Ordner `data` durch die Sicherung ersetzen, die
+alte Version in der `.env` eintragen, `docker compose up -d`. Neue Versionen
+ergänzen die Datenbank beim Start automatisch um neue Spalten, ein Zurück auf
+eine ältere Version nach einem Update ist daher nur mit der Sicherung sicher.
+
+### Optional: automatische Updates (Watchtower)
+
+Für den eigenen Server kann zusätzlich **Watchtower** laufen
+(`docker-compose.watchtower.yml`), das alle 5 Minuten prüft, ob auf GitHub ein
+neueres Image liegt, und den Container bei Bedarf automatisch neu zieht und
+neu startet:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.watchtower.yml up -d
+```
+
+**Nicht für Tester gedacht:** Watchtower braucht Zugriff auf den Docker-Socket
+(praktisch Root-Rechte auf dem Host) und zieht immer den neuesten Stand.
+
+Der Ablauf dahinter (mit Watchtower):
 1. Ein Pull Request wird nach `main` gemergt.
 2. GitHub Actions (`.github/workflows/docker-publish.yml`) baut daraufhin
    automatisch ein neues Container-Image und lädt es zu **GitHub Container
