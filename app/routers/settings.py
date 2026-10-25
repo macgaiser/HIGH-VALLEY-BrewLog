@@ -18,6 +18,12 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 ALLOWED_LOGO_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
 ALLOWED_BORDER_GRAPHIC_EXT = ALLOWED_LOGO_EXT
 ALLOWED_BACKGROUND_IMAGE_EXT = ALLOWED_LOGO_EXT
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # Obergrenze je hochgeladenem Bild
+
+
+def _upload_too_large() -> RedirectResponse:
+    msg = f"Die Datei ist zu groß (maximal {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)."
+    return RedirectResponse(f"/settings?error={quote(msg)}", status_code=303)
 
 
 def _f(value: str | None) -> float | None:
@@ -144,7 +150,9 @@ async def settings_logo_upload(session: Session = Depends(get_session), file: Up
     if ext not in ALLOWED_LOGO_EXT:
         ext = ".png"
     stored_name = f"{uuid.uuid4().hex}{ext}"
-    data = await file.read()
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        return _upload_too_large()
     (LOGO_DIR / stored_name).write_bytes(data)
 
     logo = Logo(filename=stored_name, original_filename=file.filename)
@@ -215,7 +223,9 @@ async def settings_border_graphic_upload(session: Session = Depends(get_session)
     if ext not in ALLOWED_BORDER_GRAPHIC_EXT:
         ext = ".png"
     stored_name = f"{uuid.uuid4().hex}{ext}"
-    data = await file.read()
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        return _upload_too_large()
     (BORDER_GRAPHIC_DIR / stored_name).write_bytes(data)
 
     graphic = BorderGraphic(filename=stored_name, original_filename=file.filename)
@@ -258,7 +268,9 @@ async def settings_background_image_upload(session: Session = Depends(get_sessio
     if ext not in ALLOWED_BACKGROUND_IMAGE_EXT:
         ext = ".png"
     stored_name = f"{uuid.uuid4().hex}{ext}"
-    data = await file.read()
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        return _upload_too_large()
     (BACKGROUND_IMAGE_DIR / stored_name).write_bytes(data)
 
     image = BackgroundImage(filename=stored_name, original_filename=file.filename)
