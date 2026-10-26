@@ -153,6 +153,46 @@
     sheet.style.transform = scale < 1 ? "scale(" + scale + ")" : "";
     wrap.style.height = (naturalHeight * scale) + "px";
   }
+  // Logo optisch zentrieren: Die Mitte der sichtbaren (nicht transparenten)
+  // Pixel wird in die Mitte der Logo-Box geschoben - unabhaengig von den
+  // Raendern im Bild und vom Fuellgrad. Die Verschiebung gilt im Bild-
+  // Koordinatensystem vor der 45°-Drehung (daher rotate() vor translate()).
+  function centerLabelLogo(img) {
+    if (!img.naturalWidth || !img.offsetWidth) return;
+    try {
+      var k = Math.min(1, 300 / Math.max(img.naturalWidth, img.naturalHeight));
+      var w = Math.max(1, Math.round(img.naturalWidth * k));
+      var h = Math.max(1, Math.round(img.naturalHeight * k));
+      var canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      var data = ctx.getImageData(0, 0, w, h).data;
+      var minX = w, minY = h, maxX = -1, maxY = -1;
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          if (data[(y * w + x) * 4 + 3] > 20) {
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < 0) return;
+      var fit = Math.min(img.offsetWidth / img.naturalWidth, img.offsetHeight / img.naturalHeight);
+      var dx = (((minX + maxX + 1) / 2) / w - 0.5) * img.naturalWidth * fit;
+      var dy = (((minY + maxY + 1) / 2) / h - 0.5) * img.naturalHeight * fit;
+      img.style.transform = "rotate(45deg) translate(" + (-dx).toFixed(2) + "px, " + (-dy).toFixed(2) + "px)";
+    } catch (e) { /* ohne Canvas-Zugriff bleibt die Standardposition */ }
+  }
+  function centerLabelLogos() {
+    document.querySelectorAll(".label-logo-img").forEach(function (img) {
+      if (img.complete) centerLabelLogo(img);
+      else img.addEventListener("load", function () { centerLabelLogo(img); });
+    });
+  }
+  window.addEventListener("load", centerLabelLogos);
+  centerLabelLogos();
+
   window.addEventListener("resize", fitLabelSheet);
   window.addEventListener("load", fitLabelSheet);
   fitLabelSheet();

@@ -84,3 +84,16 @@ def test_vorlage_brautag_zeitplan_hat_keine_zeiten(client):
         werte = re.findall(r'name="task_duration_min" value="([^"]*)"', text)
         assert werte, f"keine Zeitplan-Zeilen auf {path}"
         assert all(w == "" for w in werte), f"Zeiten in der Vorlage auf {path}: {werte}"
+
+
+def test_sud_ansicht_hat_bleistifte_und_info_boxen_statt_klick_hinweisen(client):
+    text = client.get("/batches/1", auth=AUTH).text
+    assert text.count('class="row-edit-link"') >= 3
+    assert "Auf eine Zeile klicken" not in text and "Auf die Zeile klicken" not in text
+    for info_id in ("ferm-hint", "boil-og-hint"):
+        assert f'data-info-toggle="{info_id}"' in text and f'id="{info_id}"' in text
+
+
+def test_etikett_zentriert_das_logo_optisch(client):
+    text = client.get("/batches/1/label", auth=AUTH).text
+    assert "centerLabelLogo" in text

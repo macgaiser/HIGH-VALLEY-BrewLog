@@ -776,7 +776,12 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
    unerwartet klein) dargestellt, mit Rand zum gruenen Rahmen. Breite/
    Hoehe kommen als Inline-Style vom je Logo einstellbaren Fuellgrad
    (Einstellungen > Logo) statt hier fest zu stehen. */
-.label-logo-img { object-fit: contain; transform: rotate(45deg); }
+.label-logo-img { object-fit: contain; transform: rotate(45deg); flex: none; }
+/* flex:none - sonst schrumpft die Logo-Box bei Fuellgrad > 100 % in der
+   Breite zurueck (Flex-Shrink), waehrend die Hoehe waechst. Die Mitte des
+   sichtbaren Logos wird zusaetzlich per JS (centerLabelLogo in label.html)
+   in die Zellenmitte geschoben, weil viele Logos ungleiche transparente
+   Raender haben und dann nicht optisch mittig sitzen. */
 
 .label-maincontent {
   flex: 1 1 auto;
@@ -1370,3 +1375,11 @@ span.flatpickr-weekday {
 .flatpickr-months .flatpickr-next-month:hover svg {
   fill: var(--brown);
 }
+
+/* Bleistift am Zeilenende editierbarer Zeilen in der Sud-Ansicht (gleicher
+   Stil wie die uebrigen Symbole: braune Kontur, goldene Fuellung). */
+.mini-table .row-edit { width: 1%; white-space: nowrap; text-align: right; padding-left: 0.3rem; }
+.row-edit-link { display: inline-flex; line-height: 0; border-radius: 6px; }
+.row-edit-icon { display: block; width: 22px; height: 22px; --icon-1: var(--brown); --icon-2: var(--gold); opacity: 0.8; }
+.clickable-row:hover .row-edit-icon, .row-edit-link:hover .row-edit-icon, .row-edit-link:focus-visible .row-edit-icon { opacity: 1; }
+.row-edit-link:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
