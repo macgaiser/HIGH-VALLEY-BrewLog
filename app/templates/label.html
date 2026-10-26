@@ -153,10 +153,12 @@
     sheet.style.transform = scale < 1 ? "scale(" + scale + ")" : "";
     wrap.style.height = (naturalHeight * scale) + "px";
   }
-  // Logo optisch zentrieren: Die Mitte der sichtbaren (nicht transparenten)
-  // Pixel wird in die Mitte der Logo-Box geschoben - unabhaengig von den
-  // Raendern im Bild und vom Fuellgrad. Die Verschiebung gilt im Bild-
-  // Koordinatensystem vor der 45°-Drehung (daher rotate() vor translate()).
+  // Logo optisch zentrieren: Das Logo wird per CSS um 45° gedreht - deshalb
+  // wird die Mitte der sichtbaren (nicht transparenten) Pixel in der
+  // GEDREHTEN Ansicht bestimmt (Bounding-Box nach der Drehung) und das Logo
+  // so verschoben, dass links/rechts und oben/unten gleich viel Rand
+  // bleibt - unabhaengig von den Raendern im Bild und vom Fuellgrad.
+  var LOGO_ROTATION_DEG = 45;
   function centerLabelLogo(img) {
     if (!img.naturalWidth || !img.offsetWidth) return;
     try {
@@ -168,20 +170,24 @@
       var ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, w, h);
       var data = ctx.getImageData(0, 0, w, h).data;
-      var minX = w, minY = h, maxX = -1, maxY = -1;
+      // Pixel -> Darstellungsgroesse: object-fit: contain in der Box
+      var fit = Math.min(img.offsetWidth / img.naturalWidth, img.offsetHeight / img.naturalHeight);
+      var sx = img.naturalWidth * fit / w, sy = img.naturalHeight * fit / h;
+      var rad = LOGO_ROTATION_DEG * Math.PI / 180, cos = Math.cos(rad), sin = Math.sin(rad);
+      var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       for (var y = 0; y < h; y++) {
         for (var x = 0; x < w; x++) {
-          if (data[(y * w + x) * 4 + 3] > 20) {
-            if (x < minX) minX = x; if (x > maxX) maxX = x;
-            if (y < minY) minY = y; if (y > maxY) maxY = y;
-          }
+          if (data[(y * w + x) * 4 + 3] <= 20) continue;
+          var px = (x + 0.5 - w / 2) * sx, py = (y + 0.5 - h / 2) * sy;
+          var rx = px * cos - py * sin, ry = px * sin + py * cos;
+          if (rx < minX) minX = rx; if (rx > maxX) maxX = rx;
+          if (ry < minY) minY = ry; if (ry > maxY) maxY = ry;
         }
       }
-      if (maxX < 0) return;
-      var fit = Math.min(img.offsetWidth / img.naturalWidth, img.offsetHeight / img.naturalHeight);
-      var dx = (((minX + maxX + 1) / 2) / w - 0.5) * img.naturalWidth * fit;
-      var dy = (((minY + maxY + 1) / 2) / h - 0.5) * img.naturalHeight * fit;
-      img.style.transform = "rotate(45deg) translate(" + (-dx).toFixed(2) + "px, " + (-dy).toFixed(2) + "px)";
+      if (maxX === -Infinity) return;
+      var tx = -(minX + maxX) / 2, ty = -(minY + maxY) / 2;
+      // translate() vor rotate(): Verschiebung im Etiketten-Koordinatensystem
+      img.style.transform = "translate(" + tx.toFixed(2) + "px, " + ty.toFixed(2) + "px) rotate(" + LOGO_ROTATION_DEG + "deg)";
     } catch (e) { /* ohne Canvas-Zugriff bleibt die Standardposition */ }
   }
   function centerLabelLogos() {
