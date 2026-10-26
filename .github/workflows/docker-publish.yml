@@ -24,7 +24,7 @@ jobs:
       packages: write
     steps:
       - name: Code auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Ohne vollen Verlauf/Tags (Standard ist ein flacher Checkout ohne
           # Tags) findet "git describe" unten kein Versions-Tag, selbst wenn
