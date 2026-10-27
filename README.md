@@ -1,46 +1,110 @@
 # HIGH VALLEY BrewLog
 
+**Das Brauprotokoll für Hobbybrauer zum Selbsthosten:** Sude, Rezeptkennzahlen,
+Lagerbestand, Statistik und Wickel-Etiketten in einer Web-App - läuft als
+Docker-Container auf dem eigenen Rechner oder der NAS, bedienbar von jedem
+Gerät im Heimnetz (auch als App auf dem Handy). Deine Daten bleiben bei dir:
+eine SQLite-Datei, kein Cloud-Konto, keine Werbung.
+
 > **Beta-Version.** Die App befindet sich in der Beta: Funktionen und
 > Datenbankstruktur können sich noch ändern - vor jedem Update `./data`
 > sichern (siehe [Backup](#version-wählen-und-updates-einspielen)). Alle
 > Berechnungen (IBU, Alkohol, Bierfarbe, CO₂, Kosten) sind Näherungen und
 > ersetzen keine eigene Messung; Nutzung auf eigene Verantwortung, ohne Gewähr.
 
-Web-App für das Brauprotokoll (ehemals Excel), Lagerbestandsverwaltung
-(Malz/Hopfen/Hefe) und Rezeptkennzahlen. Läuft als Docker-Container, z.B.
-auf einer Synology NAS, und ist von jedem Gerät im Netzwerk per Browser
-erreichbar.
+![Sud-Übersicht](docs/screenshots/uebersicht.png)
 
-## Funktionen
+*(Alle Screenshots zeigen erfundene Demo-Daten.)*
 
-- **Sude verwalten**: Stammdaten, Wasser, Schüttung, Maischplan,
-  Würzekochen/Hopfengaben, Hefegabe, Stopfhopfen, Karbonisierung,
-  Gärverlauf, Brautag-Zeitplan und Kommentare – ein Sud pro Datensatz statt
-  ein Excel-Tab pro Sud.
-- **Automatisch berechnete Kennzahlen**: Bittere (IBU, Tinseth-Formel),
-  Alkoholgehalt und Vergärungsgrad (Refraktometer-Korrektur nach Sean
-  Terrill), Bierfarbe (EBC, Morey-Gleichung), Sudhausausbeute,
-  Materialkosten je Sud und je 0,5-l-Flasche. Diese Formeln sind fachlich
-  korrigierte Standardformeln aus der Brauliteratur – die ursprüngliche
-  Excel-Vorlage enthielt u.a. eine Alkohol-Formel, die nie funktioniert hat
-  (`#NAME?` in jedem Sud), siehe `app/formulas.py` für Quellenangaben. Die
-  Bierfarbe wird nur berechnet, wenn jede Schüttungsposition mit einem
-  Malz-Lagerartikel verknüpft ist, an dem die Eigenfarbe des Malzes (in
-  °EBC, wie vom Mälzer angegeben) hinterlegt wurde – ansonsten wird der im
-  Sud-Formular direkt eingetragene EBC-Wert übernommen.
-- **Lagerbestand** für Malz, Hopfen und Hefe: Übersicht je Kategorie,
-  manuelles Zubuchen (Einkauf) bzw. Korrekturen, **automatische
-  Abbuchung** anhand der in einem Sud verwendeten Zutaten (sofern eine
-  Zutatzeile im Sud-Formular mit einem Lagerartikel verknüpft ist - Details
-  dazu im Abschnitt [Automatische Lagerabbuchung](#automatische-lagerabbuchung)),
-  und bei Malz optional eine hinterlegte Eigenfarbe (°EBC) für die
-  automatische Bierfarben-Berechnung.
-- **Einstellungen**: Durchschnittskosten für Malz/Hopfen/Hefe, Lohnkosten,
-  Refraktometer-Korrekturfaktor und die für die Sudhausausbeute angenommene
-  Malz-Extraktausbeute.
-- Zugriffsschutz per HTTP Basic Auth (Benutzername/Passwort über
-  Umgebungsvariablen).
-- Persistenz in einer SQLite-Datenbank unter `/data` (Docker-Volume).
+## Was dich erwartet
+
+### Sude festhalten
+
+Ein Sud pro Datensatz - von der Planung bis zum fertigen Bier: Stammdaten,
+Wasser (inkl. Wasserprofile), Schüttung mit Tortendiagramm, Maischplan,
+Läuterung, Würzekochen mit Hopfengaben, Hefegabe, Stopfhopfen,
+Karbonisierung (Flasche und Fass), Gärverlauf, Brautag-Zeitplan und
+Kommentare. Fast alles lässt sich direkt in der Sud-Ansicht per Stift-Symbol
+ändern. Sude lassen sich kopieren, vergleichen und als **BeerXML**
+importieren/exportieren.
+
+![Sud-Ansicht (oben)](docs/screenshots/sud-oben.png)
+
+![Sud-Ansicht (unten)](docs/screenshots/sud-unten.png)
+
+### Kennzahlen, die sich selbst berechnen
+
+Stammwürze, Bittere (IBU, Tinseth), Alkohol und Vergärungsgrad
+(Refraktometer-Korrektur nach Sean Terrill), Bierfarbe (EBC, Morey) mit
+passender Bierfarbe im Symbol, Sudhausausbeute, Kosten je Sud und je
+Flasche sowie CO₂-/Zuckerberechnung für die Karbonisierung. Die Formeln
+stehen mit Quellenangabe in `app/formulas.py`.
+
+### Lagerbestand mit automatischer Abbuchung
+
+Malz, Hopfen, Hefe und Sonstiges mit Marke, Alphasäure, Eigenfarbe und Preis.
+Zutaten im Sud mit einem Lagerartikel verknüpfen - der Bestand wird beim
+Speichern automatisch abgebucht (Details unter
+[Automatische Lagerabbuchung](#automatische-lagerabbuchung)).
+
+![Lagerbestand](docs/screenshots/lager.png)
+
+### Statistik und Reichweite
+
+Gebraute Menge, Verteilung nach Gärart, Bierstil und Bierfarbe, Top-Zutaten,
+Bitterkeit vs. Stammwürze, Braurhythmus (Bierstil × Monat) und eine
+**Reichweiten-Prognose** für deinen Lagerbestand mit Bestellempfehlung.
+
+![Statistik](docs/screenshots/statistik.png)
+
+### Etiketten zum Ausdrucken
+
+Pro Sud ein A4-Blatt mit Wickel-Etiketten: Name, Datum, IBU, Stammwürze,
+Alkohol, Bierfarbe und Hopfensorten werden automatisch eingetragen. Logo,
+Rahmengrafik, Hintergrundbild und Farben (auch dunkle Variante für Stout)
+stellst du je Sud oder als Standard in den Einstellungen ein - eigene Bilder
+lassen sich hochladen.
+
+![Etikett-Vorschau](docs/screenshots/etikett.png)
+
+### Auch am Handy
+
+Die Oberfläche passt sich dem Bildschirm an und lässt sich wie eine App
+installieren ([Hinweis zu HTTPS](#als-app-installieren-pwa)) - praktisch am
+Brautag, um Messwerte direkt einzutragen.
+
+![Ansicht am Handy](docs/screenshots/handy.png)
+
+### Außerdem
+
+- **Einstellungen:** Durchschnittskosten für Malz/Hopfen/Hefe, Lohnkosten,
+  Refraktometer-Korrekturfaktor, Malz-Extraktausbeute, Bierstile,
+  Wasserprofile und eine Standard-Vorlage für den Brautag-Zeitplan
+- **Zugriffsschutz** per Benutzername/Passwort (Pflicht), CSRF-Schutz und
+  Upload-Limit - siehe [Sicherheit](#deployment-auf-der-synology-nas-docker--container-manager)
+- **Dein Daten-Ordner:** alles liegt in einem Verzeichnis (`./data`) und lässt
+  sich mit einer Kopie sichern
+- **Optionaler Import** der eigenen Excel-Protokolle (siehe unten)
+
+## Schnellstart
+
+Voraussetzung: [Docker](https://docs.docker.com/get-docker/) mit Docker
+Compose.
+
+1. `docker-compose.yml` und `.env.example` aus diesem Repository in einen
+   leeren Ordner legen, `.env.example` in `.env` umbenennen
+2. In der `.env` ein eigenes Passwort setzen: `APP_PASSWORD=...`
+   (**Pflicht** - ohne eigenes Passwort startet die App nicht)
+3. Starten:
+   ```bash
+   docker compose pull
+   docker compose up -d
+   ```
+4. Im Browser öffnen: `http://localhost:5050` (bzw. `http://<IP-des-Rechners>:5050`),
+   Benutzername `admin` und dein Passwort
+
+Für Synology NAS, feste Versionen, Updates und Backup siehe
+[Deployment](#deployment-auf-der-synology-nas-docker--container-manager).
 
 ## Import der bisherigen Excel-Protokolle
 
@@ -268,7 +332,7 @@ docker compose exec brewlog python scripts/link_inventory.py --apply    # verkn�
 **Persistenz:** Der Ordner `./data` (gemountet nach `/data`) enthält die
 komplette SQLite-Datenbank. Diesen Ordner bei Backups berücksichtigen.
 
-**Sicherheit:** Die Oberfläche ist nur per HTTP Basic Auth geschützt.
+**Sicherheit:** Die Oberfläche ist per Benutzername/Passwort (HTTP Basic Auth) geschützt.
 `APP_PASSWORD` ist Pflicht (die App startet nicht mit den bekannten
 Beispielwerten wie `brewlog` oder `changeme`), `APP_USERNAME` optional. Für einen
 Zugriff aus dem Internet (nicht empfohlen) sollte zusätzlich eine
@@ -341,7 +405,11 @@ Alle Routen (außer `/healthz`) erfordern HTTP Basic Auth.
 | GET/POST | `/inventory/new` | Neuen Lagerartikel anlegen |
 | GET/POST | `/inventory/{id}/edit` | Lagerartikel bearbeiten |
 | POST | `/inventory/{id}/restock` | Bestand zu-/abbuchen |
-| GET/POST | `/settings` | Kosten- und Berechnungseinstellungen |
+| GET | `/batches/compare` | Mehrere Sude vergleichen |
+| GET | `/batches/{id}/label` | Etikett-Vorschau und -Druck |
+| GET | `/batches/{id}/export/beerxml` | Sud als BeerXML exportieren |
+| GET | `/statistics` | Statistik und Lager-Reichweite |
+| GET/POST | `/settings` | Kosten-, Etiketten- und Berechnungseinstellungen |
 
 ## Lizenz
 

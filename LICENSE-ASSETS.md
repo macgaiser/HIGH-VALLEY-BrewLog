@@ -13,6 +13,8 @@ Diese Lizenz gilt für die folgenden Werke (zusammen "Assets"):
 - `app/static/favicon-64.png` und `app/static/favicon.ico`,
 - die in `app/templates/base.html` als SVG eingebetteten Symbole und
   Zeichnungen (Bierkrug, Fass, Gärsymbole usw.),
+- die Screenshots unter `docs/screenshots/` (soweit sie Assets der App zeigen;
+  die Demo-Daten darin sind frei erfunden),
 - Name, Wortmarke und Wappen **"HIGH VALLEY"**, **"7449"**, **"High Valley Brew
   Co."** sowie das zugehörige Logo.
 
