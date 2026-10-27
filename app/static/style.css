@@ -848,6 +848,10 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
 .label-beername { font-size: 1.3rem; line-height: 1; }
 
 .label-right {
+  /* Werte/Symbole etwas nach unten gerueckt (Abstand zur oberen Ranke);
+     seit die Eckfelder exakt quadratisch sind, ist das Mittelfeld breiter
+     und die Ranke damit etwas hoeher. */
+  --label-info-shift: 1.5px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -867,7 +871,7 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
    ueber Flexbox verteilt. */
 .label-right-row-stats .label-stat {
   position: absolute;
-  top: 10.85%;
+  top: calc(10.85% + var(--label-info-shift));
   transform: translateX(-50%);
 }
 .label-right-row-stats .label-stat:nth-child(1) { left: 16.8%; }
@@ -882,8 +886,8 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
   position: absolute;
   left: 35.3%;
   transform: translateX(-50%);
-  top: 9.5%;
-  bottom: 39.74%;
+  top: calc(9.5% + var(--label-info-shift));
+  bottom: calc(39.74% - var(--label-info-shift));
   aspect-ratio: 1;
 }
 .label-batch-icon {
@@ -914,7 +918,7 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
      height:100%). 1.03rem statt urspruenglich 1.15rem - 0.9rem (vorheriger
      Versuch) war mit ~1mm weniger Schrifthoehe zu viel, ~0.5mm reichten. */
   transform: translateY(-50%) rotate(180deg);
-  font-size: 1.03rem;
+  font-size: 0.92rem;
   line-height: 1;
   white-space: nowrap;
 }
@@ -928,8 +932,8 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
      (Hoehe * 0.7) durch Anheben der Unterkante, Oberkante unveraendert.
      Nochmal um 1mm verkleinert, wieder mit fixer Oberkante (bottom
      entsprechend erhoeht). */
-  top: 9.5%;
-  bottom: 39.74%;
+  top: calc(9.5% + var(--label-info-shift));
+  bottom: calc(39.74% - var(--label-info-shift));
   aspect-ratio: 1;
 }
 .label-mug { display: block; width: 100%; height: 100%; --icon-1: var(--label-green); }
@@ -1084,7 +1088,7 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
 
   /* Abfuelldatum: verkleinert, damit bei zentrierter Position (top:50%)
      mindestens 0.75mm Abstand zu Ranke oben UND unten bleibt. */
-  .label-batch-date { font-size: 0.74rem; }
+  .label-batch-date { font-size: 0.66rem; }
 
   /* EBC-Bierkrug und Fass (Sud-Nummer): nach unten verschoben (0.5mm+
      Abstand zur oberen Ranke, vorher auf Kontakt) UND verkleinert (44.5%
@@ -1098,8 +1102,8 @@ tr.row-low-stock td:first-child { border-left: 3px solid var(--danger); }
      bottom von 36.44% auf 35.72% (~0.18mm mehr Hoehe, ca. 0.05mm Rest-
      abstand zu den Hopfensorten darunter). Danach um 1mm verkleinert
      (bottom von 35.72% auf 39.74%), Oberkante unveraendert. */
-  .label-mug-wrap, .label-batch-icon-wrap { top: 14.95%; bottom: 39.74%; }
-  .label-right-row-stats .label-stat { top: 18.35%; }
+  .label-mug-wrap, .label-batch-icon-wrap { top: calc(14.95% + var(--label-info-shift)); bottom: calc(39.74% - var(--label-info-shift)); }
+  .label-right-row-stats .label-stat { top: calc(18.35% + var(--label-info-shift)); }
 
   /* Hopfensorten-Zeile: Oberkante knapp unter der neuen Unterkante von
      EBC/Fass (17%+44.5%=61.5%), Unterkante bleibt unveraendert bei

@@ -37,7 +37,6 @@ Dateien.
 | SQLModel | MIT |
 | Jinja2 | BSD-3-Clause |
 | python-multipart | Apache License 2.0 |
-| openpyxl | MIT |
 
 Diese Pakete werden nicht mit dem Quellcode ausgeliefert, sondern beim Bauen
 des Docker-Images bzw. per `pip install -r requirements.txt` geladen; ihre
