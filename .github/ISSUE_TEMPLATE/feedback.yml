@@ -1,0 +1,79 @@
+name: Feedback zur Beta
+description: Rückmeldung nach dem Ausprobieren (Installation, Bedienung, Zahlen)
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fürs Testen! Bitte **keine Passwörter, IP-Adressen oder persönliche Daten** angeben. Kurze Stichpunkte reichen, konkrete Beispiele helfen am meisten. Einzelne Fehler bitte zusätzlich als „Fehler melden", Wünsche als „Wunsch / Idee".
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Steht in der Fußzeile der App (z. B. v1.1.0-beta.1).
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Wie läuft die App?
+      options:
+        - Synology (Container Manager)
+        - Docker auf Rechner/Server
+        - Lokal mit Python
+        - Anders
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: Hat die Installation ohne Hilfe geklappt?
+      options:
+        - Ja, problemlos
+        - Mit Mühe
+        - Nur mit Hilfe
+        - Nein
+    validations:
+      required: true
+  - type: textarea
+    id: setup_details
+    attributes:
+      label: Wo hat es bei der Installation gehakt? (optional)
+      description: Welche Meldung oder welcher Schritt der Anleitung war unklar?
+  - type: checkboxes
+    id: used
+    attributes:
+      label: Was hast du ausprobiert?
+      options:
+        - label: Sude anlegen und bearbeiten
+        - label: Lagerbestand und automatische Abbuchung
+        - label: Statistik
+        - label: Etiketten drucken
+        - label: Nutzung am Handy
+  - type: textarea
+    id: good
+    attributes:
+      label: Was hat gut funktioniert? (1–3 Punkte)
+  - type: textarea
+    id: bad
+    attributes:
+      label: Was hat genervt oder gefehlt? (1–3 Punkte, jeweils mit Beispiel)
+  - type: textarea
+    id: numbers
+    attributes:
+      label: Stimmen die berechneten Werte (IBU, Alkohol, Farbe)?
+      description: Vergleich mit deinen Messwerten oder einem anderen Rechner. Gern mit Beispielwerten (Schüttung, Stammwürze, Hopfengaben).
+  - type: dropdown
+    id: continue
+    attributes:
+      label: Würdest du die App weiter nutzen?
+      options:
+        - Ja
+        - Vielleicht
+        - Nein
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Warum? (optional)
