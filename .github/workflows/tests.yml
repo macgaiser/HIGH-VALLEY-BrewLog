@@ -25,6 +25,6 @@ jobs:
       - name: Abhängigkeiten installieren
         run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Lint (Syntaxfehler, ungenutzte Importe/Variablen)
-        run: ruff check app tests scripts run.py --select E9,F
+        run: ruff check app tests run.py --select E9,F
       - name: Tests
         run: pytest

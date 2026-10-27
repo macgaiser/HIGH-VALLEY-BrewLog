@@ -94,7 +94,6 @@ Brautag, um Messwerte direkt einzutragen.
   Upload-Limit - siehe [Sicherheit](#deployment-auf-der-synology-nas-docker--container-manager)
 - **Dein Daten-Ordner:** alles liegt in einem Verzeichnis (`./data`) und lässt
   sich mit einer Kopie sichern
-- **Optionaler Import** der eigenen Excel-Protokolle (siehe unten)
 
 ## Schnellstart
 
@@ -116,49 +115,6 @@ Compose.
 Für Synology NAS, feste Versionen, Updates und Backup siehe
 [Deployment](#deployment-auf-der-synology-nas-docker--container-manager).
 
-## Import der bisherigen Excel-Protokolle
-
-`scripts/import_xlsx.py` liest die historischen Sude direkt aus der
-Excel-Datei ein (ein Tab pro Sud, plus einen "Lagerbestand"-Tab) und legt
-sie in der Datenbank an. Es werden **nur Werte übernommen, keine Formeln**
-– alle Kennzahlen werden von der App selbst neu berechnet.
-
-```bash
-export DATA_DIR=./data   # oder der Pfad, den auch die App nutzt
-python scripts/import_xlsx.py /pfad/zur/Brauprotokoll.xlsx
-```
-
-Der Import ist idempotent je Excel-Tab (ein bereits importierter Tab wird
-beim erneuten Aufruf übersprungen) und der Lagerbestand wird nur beim
-allerersten Import befüllt, um spätere manuelle Buchungen nicht zu
-überschreiben. Bei mehreren Excel-Dateien (z.B. eine ältere Version mit
-weiteren historischen Suden) einfach das Skript für jede Datei erneut
-aufrufen - Sude mit exakt gleichem Tab-Namen in beiden Dateien werden dabei
-nur einmal importiert.
-
-Das Braubuch-Layout hat sich über die Jahre mehrfach verändert (frühe Sude
-sind knapper dokumentiert: keine Alphasäure je Hopfengabe, kein
-strukturierter Gärverlauf, IBU/Ausbeute/Alkohol nur als von Hand
-geschätzter Gesamtwert). Das Skript erkennt das jeweilige Layout pro
-Tabellenblatt automatisch. Für Sude, bei denen die nötigen Rohdaten fehlen,
-bleiben die entsprechenden berechneten Kennzahlen in der App leer (`–`)
-statt einen falschen Wert vorzutäuschen; die damals von Hand eingetragene
-Schätzung wird stattdessen als Kommentar "Original-Aufzeichnung im
-Braubuch: ..." am Sud übernommen.
-
-Getestet mit beiden Braubuch-Dateien (Sude #1-#48 aus dem älteren Archiv,
-#49-#57 aus dem aktuellen Protokoll, insgesamt 58 Sude sowie 52
-Lagerartikel).
-
-**Wichtig:** Der Import übernimmt Zutatennamen (Malz/Hopfen/Hefe) nur als
-Text, ohne sie mit einem Lagerartikel zu verknüpfen - das gilt nur für
-Zutatzeilen, die im Sud-Formular über das Dropdown ausgewählt wurden. Ohne
-diese Verknüpfung bleiben sowohl der [Zutaten-Filter in der
-Sudübersicht](#zutaten-filter-in-der-sudübersicht) als auch die
-[automatische Lagerabbuchung](#automatische-lagerabbuchung) für importierte
-Sude wirkungslos. `scripts/link_inventory.py` (siehe unten) holt diese
-Verknüpfung nachträglich per Namensabgleich nach.
-
 ## Zutaten-Filter in der Sudübersicht
 
 Die Sudübersicht hat ein Dropdown-Filtermenü ("Filter"), in dem Zutaten aus
@@ -170,23 +126,9 @@ Der Filter erkennt eine Zutat in einem Sud nur über die Verknüpfung mit dem
 Lagerartikel (`inventory_item_id`), nicht über den Namenstext. Diese
 Verknüpfung entsteht automatisch, wenn eine Zutatzeile im Sud-Formular über
 das jeweilige Dropdown (statt nur als Freitext) ausgewählt wird. Für Sude
-ohne diese Verknüpfung - v.a. aus dem Excel-Import, siehe oben - liefert
-der Filter auch dann kein Ergebnis, wenn der Name augenscheinlich
-übereinstimmt. Mit `scripts/link_inventory.py` lässt sich das für
-bestehende Sude nachträglich beheben:
-
-```bash
-export DATA_DIR=./data
-python scripts/link_inventory.py            # Vorschau, ändert nichts
-python scripts/link_inventory.py --apply    # verknüpft tatsächlich
-```
-
-Das Skript sucht für jede noch unverknüpfte Zutatzeile einen Lagerartikel
-mit exakt gleichem Namen (Groß-/Kleinschreibung und Leerzeichen am Rand
-werden ignoriert) in der passenden Kategorie und verknüpft ihn. Namen ohne
-eindeutigen Treffer werden am Ende aufgelistet und müssen bei Bedarf manuell
-über "Sud bearbeiten" verknüpft werden (z.B. bei Tippfehlern oder
-abweichender Schreibweise zwischen Braubuch und Lagerbestand).
+ohne diese Verknüpfung (Zutat nur als Freitext eingetragen) liefert der Filter
+kein Ergebnis, auch wenn der Name augenscheinlich übereinstimmt - die Zutat
+im Sud-Formular dann einfach über das Dropdown auswählen.
 
 ## Automatische Lagerabbuchung
 
@@ -217,10 +159,9 @@ nötig ist:
 - **Lagerbuchung sperren**: Ein Sud lässt sich im Formular über die
   Checkbox "Lagerbuchung für diesen Sud sperren" von der automatischen
   Ab-/Rückbuchung ausnehmen (🔒-Kennzeichen auf der Sud-Detailseite).
-  Gedacht für historische, bereits abgeschlossene Sude - z.B. nachdem
-  `scripts/link_inventory.py` sie nachträglich mit dem Lagerbestand
-  verknüpft hat: ohne diese Sperre würde ein späteres Bearbeiten (und sei
-  es nur eine Kleinigkeit) den aktuellen Bestand rückwirkend um die damals
+  Gedacht für historische, bereits abgeschlossene Sude (z.B. nachträglich
+  erfasste): ohne diese Sperre würde ein späteres Bearbeiten (und sei es nur
+  eine Kleinigkeit) den aktuellen Bestand rückwirkend um die damals
   verwendete Menge reduzieren, obwohl die Zutaten längst real verbraucht
   wurden. Bereits vorhandene Buchungen des Suds werden beim Setzen der
   Sperre zurückgebucht; beim Entfernen der Sperre greift die automatische
@@ -323,22 +264,6 @@ Falls du stattdessen direkt aus dem Code bauen willst (z.B. für eigene,
 noch nicht gemergte Änderungen): `docker-compose.yml` um `build: .`
 ergänzen und mit `docker compose up -d --build` statt `pull` starten.
 
-**Historische Daten importieren** (einmalig, nach dem ersten Start):
-```bash
-docker compose exec brewlog python scripts/import_xlsx.py /data/Brauprotokoll.xlsx
-```
-Dazu die Excel-Datei vorher in den gemounteten `./data`-Ordner legen (dort
-liegt sie dann unter `/data/...` im Container).
-
-**Zutaten nachträglich mit dem Lagerbestand verknüpfen** (siehe
-[Zutaten-Filter in der Sudübersicht](#zutaten-filter-in-der-sudübersicht) -
-nötig, damit Filter und automatische Abbuchung auch für importierte Sude
-funktionieren):
-```bash
-docker compose exec brewlog python scripts/link_inventory.py            # Vorschau
-docker compose exec brewlog python scripts/link_inventory.py --apply    # verknüpft tatsächlich
-```
-
 **Persistenz:** Der Ordner `./data` (gemountet nach `/data`) enthält die
 komplette SQLite-Datenbank. Diesen Ordner bei Backups berücksichtigen.
 
@@ -396,7 +321,6 @@ app/
   routers/              FastAPI-Routen (Sude, Lagerbestand, Einstellungen)
   templates/             Jinja2-Templates
   static/                  CSS/JS
-scripts/import_xlsx.py    Einmalig: Import der historischen Excel-Sude
 ```
 
 ## API-Übersicht (server-gerenderte Seiten, kein separates JSON-API)
