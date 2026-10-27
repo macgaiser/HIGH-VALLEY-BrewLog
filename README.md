@@ -194,7 +194,7 @@ benötigt, kein vollständiges Repository.
 
 Ohne Angabe läuft immer der **neueste Stand** (`latest`). Für Tester (und
 alle, die keine halbfertigen Änderungen wollen) ist eine **feste Version**
-besser: in der `.env` z.B. `BREWLOG_VERSION=v0.1.0-beta` setzen (verfügbare
+besser: in der `.env` z.B. `BREWLOG_VERSION=v1.1.0-beta.1` setzen (verfügbare
 Versionen: Reiter *Releases* bzw. *Packages* auf GitHub). Ein Update ist dann
 eine bewusste Entscheidung:
 

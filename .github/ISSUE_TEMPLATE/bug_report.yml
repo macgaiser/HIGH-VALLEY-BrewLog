@@ -10,7 +10,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: Steht in der Fußzeile der App (z. B. v0.1.0-beta oder ein Commit-Kürzel).
+      description: Steht in der Fußzeile der App (z. B. v1.1.0-beta.1 oder ein Commit-Kürzel).
     validations:
       required: true
   - type: dropdown
