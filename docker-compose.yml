@@ -4,7 +4,7 @@ services:
     # gebaut, siehe .github/workflows/docker-publish.yml). Für lokales
     # Entwickeln direkt aus dem Code kann "image:" durch "build: ." ersetzt
     # bzw. ergänzt und mit "docker compose up -d --build" gestartet werden.
-    # Version per BREWLOG_VERSION in der .env waehlbar (z.B. v0.1.0-beta, siehe
+    # Version per BREWLOG_VERSION in der .env waehlbar (z.B. v1.1.0-beta.1, siehe
     # Releases auf GitHub); ohne Angabe der jeweils neueste Stand (latest).
     image: ghcr.io/macgaiser/highvalley-brewlog:${BREWLOG_VERSION:-latest}
     container_name: highvalley-brewlog
