@@ -73,6 +73,10 @@ Hopfensorten:
 
 ![Individuell gestaltetes Etikett](docs/screenshots/etikett-individuell.png)
 
+Und so sieht das ausgedruckte, um die Flasche geklebte Etikett aus:
+
+<img src="docs/screenshots/etikett-flasche.jpg" alt="Fertiges Etikett auf einer Bügelverschluss-Flasche" width="420">
+
 ### Auch am Handy
 
 Die Oberfläche passt sich dem Bildschirm an und lässt sich wie eine App
