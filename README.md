@@ -67,6 +67,12 @@ lassen sich hochladen.
 
 ![Etikett-Vorschau](docs/screenshots/etikett.png)
 
+Mit eigenem Logo, Rahmengrafik (Hopfenranke) und Hintergrundbild sieht dasselbe
+Etikett so aus - hier mit eigenem Sudnamen und automatisch eingetragenen
+Hopfensorten:
+
+![Individuell gestaltetes Etikett](docs/screenshots/etikett-individuell.png)
+
 ### Auch am Handy
 
 Die Oberfläche passt sich dem Bildschirm an und lässt sich wie eine App
