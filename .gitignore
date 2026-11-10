@@ -4,3 +4,6 @@ __pycache__/
 data/
 .env
 .pytest_cache/
+
+# Lokale Claude-Code-Einstellungen: koennen freigegebene Befehle samt Zugangsdaten enthalten
+.claude/
